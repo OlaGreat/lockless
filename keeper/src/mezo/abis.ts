@@ -33,7 +33,16 @@ export const vaultAbi = parseAbi([
 ]);
 
 export const harvesterAbi = parseAbi([
+  "struct Route { address from; address to; bool stable; address factory; }",
+  "function lockMezo() returns (uint256)",
+  "function swapToMusd(address tokenIn, uint256 amountIn, uint256 minMusdOut, Route[] routes) returns (uint256)",
   "function distribute(address token)",
+]);
+
+export const routerAbi = parseAbi([
+  "struct Route { address from; address to; bool stable; address factory; }",
+  "function defaultFactory() view returns (address)",
+  "function getAmountsOut(uint256 amountIn, Route[] routes) view returns (uint256[])",
 ]);
 
 /** MUSD's BTC/USD price feed. `fetchPrice` updates storage, so it is read with eth_call. */
