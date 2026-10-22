@@ -35,6 +35,7 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         address indexed caller, address indexed receiver, uint256 indexed tokenId, uint256 amount
     );
     event MasterLockCreated(uint256 indexed tokenId);
+    event RewardForwarded(address indexed token, uint256 amount);
     event KeeperUpdated(address indexed keeper);
     event RewardsReceiverUpdated(address indexed receiver);
 
@@ -43,6 +44,7 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
     error NoMasterLock();
     error LockVotedThisEpoch();
     error OnlyKeeper();
+    error NoRewardsReceiver();
 
     modifier onlyKeeper() {
         if (msg.sender != keeper) revert OnlyKeeper();
@@ -110,6 +112,27 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         voter.poke(masterTokenId);
     }
 
+    /// @notice Claims the incentives the master lock earned and passes them to the rewards
+    ///         receiver.
+    /// @param bribes Incentive contracts of the gauges the master lock voted for.
+    /// @param tokens Reward tokens to claim from each incentive contract, in the same order.
+    function harvest(address[] calldata bribes, address[][] calldata tokens)
+        external
+        onlyKeeper
+        nonReentrant
+    {
+        _requireMasterLock();
+        _requireRewardsReceiver();
+        voter.claimBribes(bribes, tokens, masterTokenId);
+        _forwardAll(tokens);
+    }
+
+    /// @notice Passes any reward tokens sitting in the vault to the rewards receiver.
+    function forwardRewards(address[] calldata tokens) external onlyKeeper nonReentrant {
+        _requireRewardsReceiver();
+        _forwardEach(tokens);
+    }
+
     /// @notice Replaces the account allowed to vote and harvest.
     function setKeeper(address newKeeper) external onlyOwner {
         _requireNonZeroAddress(newKeeper);
@@ -150,6 +173,25 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         emit MasterLockCreated(tokenId);
     }
 
+    function _forwardAll(address[][] calldata tokenGroups) private {
+        for (uint256 i = 0; i < tokenGroups.length; i++) {
+            _forwardEach(tokenGroups[i]);
+        }
+    }
+
+    function _forwardEach(address[] calldata tokens) private {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            _forwardBalance(IERC20(tokens[i]));
+        }
+    }
+
+    function _forwardBalance(IERC20 token) private {
+        uint256 balance = token.balanceOf(address(this));
+        if (balance == 0) return;
+        token.safeTransfer(rewardsReceiver, balance);
+        emit RewardForwarded(address(token), balance);
+    }
+
     function _absorbLock(uint256 tokenId) private returns (uint256 amount) {
         _clearVotes(tokenId);
         _unlockIfPermanent(tokenId);
@@ -175,6 +217,10 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
 
     function _requireMasterLock() private view {
         if (masterTokenId == 0) revert NoMasterLock();
+    }
+
+    function _requireRewardsReceiver() private view {
+        if (rewardsReceiver == address(0)) revert NoRewardsReceiver();
     }
 
     function _requireNotVotedThisEpoch(uint256 tokenId) private view {
