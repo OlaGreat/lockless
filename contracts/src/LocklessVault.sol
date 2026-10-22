@@ -36,6 +36,7 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
     );
     event MasterLockCreated(uint256 indexed tokenId);
     event RewardForwarded(address indexed token, uint256 amount);
+    event RebaseDistributed(uint256 amount);
     event KeeperUpdated(address indexed keeper);
     event RewardsReceiverUpdated(address indexed receiver);
 
@@ -133,6 +134,19 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         _forwardEach(tokens);
     }
 
+    /// @notice Claims the master lock's veMEZO rebase and mints the growth as stMEZO rewards.
+    function claimRebase() external nonReentrant {
+        _requireMasterLock();
+        rebaseDistributor.claim(masterTokenId);
+        _distributeRebase();
+    }
+
+    /// @notice Mints stMEZO for MEZO that reached the master lock without a deposit, such as a
+    ///         rebase that someone else claimed for it.
+    function distributeRebase() external nonReentrant {
+        _distributeRebase();
+    }
+
     /// @notice Replaces the account allowed to vote and harvest.
     function setKeeper(address newKeeper) external onlyOwner {
         _requireNonZeroAddress(newKeeper);
@@ -171,6 +185,18 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         veMEZO.lockPermanent(tokenId);
         masterTokenId = tokenId;
         emit MasterLockCreated(tokenId);
+    }
+
+    function _distributeRebase() private {
+        _requireRewardsReceiver();
+        uint256 growth = _unbackedMezo();
+        if (growth == 0) return;
+        stMEZO.mint(rewardsReceiver, growth);
+        emit RebaseDistributed(growth);
+    }
+
+    function _unbackedMezo() private view returns (uint256) {
+        return lockedAmount() - stMEZO.totalSupply();
     }
 
     function _forwardAll(address[][] calldata tokenGroups) private {
