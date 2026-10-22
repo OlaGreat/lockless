@@ -87,19 +87,18 @@ contract StMEZOStaking is Ownable2Step, ReentrancyGuard {
 
     /// @notice Returns staked stMEZO to the caller.
     function withdraw(uint256 amount) external nonReentrant updateRewards(msg.sender) {
-        _requireNonZeroAmount(amount);
-        if (amount > balanceOf[msg.sender]) revert InsufficientStake();
-        totalStaked -= amount;
-        balanceOf[msg.sender] -= amount;
-        stakingToken.safeTransfer(msg.sender, amount);
-        emit Withdrawn(msg.sender, amount);
+        _withdraw(amount);
     }
 
     /// @notice Pays the caller everything they have earned in every reward token.
     function claimRewards() external nonReentrant updateRewards(msg.sender) {
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            _payReward(msg.sender, rewardTokens[i]);
-        }
+        _payAllRewards(msg.sender);
+    }
+
+    /// @notice Withdraws the caller's whole stake and pays all their rewards.
+    function exit() external nonReentrant updateRewards(msg.sender) {
+        _withdraw(balanceOf[msg.sender]);
+        _payAllRewards(msg.sender);
     }
 
     /// @notice Funds a reward token and streams it, plus anything still unpaid, over its duration.
@@ -138,6 +137,21 @@ contract StMEZOStaking is Ownable2Step, ReentrancyGuard {
     /// @notice The latest moment that still earns rewards for a token.
     function lastTimeRewardApplicable(address token) public view returns (uint256) {
         return Math.min(block.timestamp, rewardData[token].periodFinish);
+    }
+
+    function _withdraw(uint256 amount) private {
+        _requireNonZeroAmount(amount);
+        if (amount > balanceOf[msg.sender]) revert InsufficientStake();
+        totalStaked -= amount;
+        balanceOf[msg.sender] -= amount;
+        stakingToken.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    function _payAllRewards(address account) private {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            _payReward(account, rewardTokens[i]);
+        }
     }
 
     function _updateRewards(address account) private {
