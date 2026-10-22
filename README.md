@@ -50,7 +50,14 @@ stMEZO supply always equals the MEZO in the master lock. Rebase growth is minted
 
 ### Testnet deployment (chain 31611)
 
-Addresses are written to [`contracts/deployments/31611.json`](contracts/deployments) by the deploy script.
+| Contract | Address |
+|---|---|
+| LocklessVault | [`0xD274D85f935A097252D9B624A45f9Dd1E6B9c671`](https://explorer.test.mezo.org/address/0xD274D85f935A097252D9B624A45f9Dd1E6B9c671) |
+| stMEZO | [`0x5a8287c780340a5Ccaf7f7a3c69175Bcf0921D1E`](https://explorer.test.mezo.org/address/0x5a8287c780340a5Ccaf7f7a3c69175Bcf0921D1E) |
+| StMEZOStaking | [`0x04f35c7a37e5A25c5698736f1cB1CD6E0EC7CD93`](https://explorer.test.mezo.org/address/0x04f35c7a37e5A25c5698736f1cB1CD6E0EC7CD93) |
+| RewardHarvester | [`0x91dd4d134DA056CD1B17b0D351f5B3cDCB77cd50`](https://explorer.test.mezo.org/address/0x91dd4d134DA056CD1B17b0D351f5B3cDCB77cd50) |
+
+The deploy script writes these to [`contracts/deployments/31611.json`](contracts/deployments/31611.json), which the keeper and the app read.
 
 ## Repository
 
