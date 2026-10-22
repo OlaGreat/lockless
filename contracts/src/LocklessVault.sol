@@ -39,6 +39,12 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
     error ZeroAmount();
     error NoMasterLock();
     error LockVotedThisEpoch();
+    error OnlyKeeper();
+
+    modifier onlyKeeper() {
+        if (msg.sender != keeper) revert OnlyKeeper();
+        _;
+    }
 
     constructor(
         IVotingEscrow veMEZO_,
@@ -85,6 +91,20 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         stMEZO.mint(receiver, amount);
 
         emit LockDeposited(msg.sender, receiver, tokenId, amount);
+    }
+
+    /// @notice Splits the master lock's votes across boost gauges for this epoch.
+    /// @param gauges Boost gauges to vote for.
+    /// @param weights Relative weight for each gauge, in the same order.
+    function vote(address[] calldata gauges, uint256[] calldata weights) external onlyKeeper {
+        _requireMasterLock();
+        voter.vote(masterTokenId, gauges, weights);
+    }
+
+    /// @notice Refreshes the master lock's recorded votes after its MEZO balance changed.
+    function poke() external {
+        _requireMasterLock();
+        voter.poke(masterTokenId);
     }
 
     /// @notice MEZO currently held in the master lock.
