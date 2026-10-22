@@ -19,3 +19,7 @@ mezo_testnet = "https://rpc.test.mezo.org"
 
 [fmt]
 line_length = 100
+
+# Fork tests execute Mezo's own contracts, which use newer opcodes than our london target.
+[profile.fork]
+evm_version = "cancun"
