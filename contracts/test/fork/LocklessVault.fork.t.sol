@@ -20,7 +20,7 @@ interface IBoostVoterTestHelpers {
 }
 
 /// @notice Runs the vault against the real Mezo testnet contracts on a local fork.
-/// @dev Run with: RUN_FORK_TESTS=true FOUNDRY_PROFILE=fork forge test --match-path "test/fork/*"
+/// @dev Run with: RUN_FORK_TESTS=true forge test --match-path "test/fork/*"
 contract LocklessVaultForkTest is Test {
     IVotingEscrow internal constant VE_MEZO =
         IVotingEscrow(0xaCE816CA2bcc9b12C59799dcC5A959Fb9b98111b);
