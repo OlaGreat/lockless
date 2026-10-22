@@ -18,6 +18,7 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
 
     /// @dev Any valid duration works because the lock becomes permanent in the same transaction.
     uint256 private constant MASTER_LOCK_DURATION = 2 weeks;
+    uint256 private constant EPOCH = 1 weeks;
 
     IVotingEscrow public immutable veMEZO;
     IERC20 public immutable mezo;
@@ -29,10 +30,15 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
     address public keeper;
 
     event Deposited(address indexed caller, address indexed receiver, uint256 amount);
+    event LockDeposited(
+        address indexed caller, address indexed receiver, uint256 indexed tokenId, uint256 amount
+    );
     event MasterLockCreated(uint256 indexed tokenId);
 
     error ZeroAddress();
     error ZeroAmount();
+    error NoMasterLock();
+    error LockVotedThisEpoch();
 
     constructor(
         IVotingEscrow veMEZO_,
@@ -66,10 +72,25 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         emit Deposited(msg.sender, receiver, amount);
     }
 
+    /// @notice Merges an existing veMEZO lock into the master lock and mints stMEZO for its MEZO.
+    /// @dev The caller must own the lock and approve the vault first. A lock that voted in the
+    ///      current epoch cannot be reset until the next one, so it is rejected.
+    function depositLock(uint256 tokenId, address receiver) external nonReentrant {
+        _requireNonZeroAddress(receiver);
+        _requireMasterLock();
+        _requireNotVotedThisEpoch(tokenId);
+
+        veMEZO.transferFrom(msg.sender, address(this), tokenId);
+        uint256 amount = _absorbLock(tokenId);
+        stMEZO.mint(receiver, amount);
+
+        emit LockDeposited(msg.sender, receiver, tokenId, amount);
+    }
+
     /// @notice MEZO currently held in the master lock.
     function lockedAmount() public view returns (uint256) {
         if (masterTokenId == 0) return 0;
-        return uint256(int256(veMEZO.locked(masterTokenId).amount));
+        return _lockedAmountOf(masterTokenId);
     }
 
     function _pullMezo(uint256 amount) private {
@@ -90,6 +111,37 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
         veMEZO.lockPermanent(tokenId);
         masterTokenId = tokenId;
         emit MasterLockCreated(tokenId);
+    }
+
+    function _absorbLock(uint256 tokenId) private returns (uint256 amount) {
+        _clearVotes(tokenId);
+        _unlockIfPermanent(tokenId);
+        amount = _lockedAmountOf(tokenId);
+        veMEZO.merge(tokenId, masterTokenId);
+    }
+
+    function _clearVotes(uint256 tokenId) private {
+        if (veMEZO.voted(tokenId)) voter.reset(tokenId);
+    }
+
+    function _unlockIfPermanent(uint256 tokenId) private {
+        if (veMEZO.locked(tokenId).isPermanent) veMEZO.unlockPermanent(tokenId);
+    }
+
+    function _lockedAmountOf(uint256 tokenId) private view returns (uint256) {
+        return uint256(int256(veMEZO.locked(tokenId).amount));
+    }
+
+    function _currentEpochStart() private view returns (uint256) {
+        return (block.timestamp / EPOCH) * EPOCH;
+    }
+
+    function _requireMasterLock() private view {
+        if (masterTokenId == 0) revert NoMasterLock();
+    }
+
+    function _requireNotVotedThisEpoch(uint256 tokenId) private view {
+        if (voter.lastVoted(tokenId) >= _currentEpochStart()) revert LockVotedThisEpoch();
     }
 
     function _requireNonZeroAddress(address account) private pure {
