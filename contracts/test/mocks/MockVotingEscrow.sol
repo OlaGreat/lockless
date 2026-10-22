@@ -5,8 +5,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IVotingEscrow} from "../../src/interfaces/IVotingEscrow.sol";
 
-/// @notice Follows the veMEZO rules Lockless relies on: ownership, permanent locks, merge and
-///         the voted flag. Error names match the real contract.
+/// @notice Follows the veMEZO rules Lockless relies on: ownership, permanent locks, merge, the
+///         voted flag and the same-block ownership change guard. Error names match the real
+///         contract.
 contract MockVotingEscrow is IVotingEscrow {
     uint256 public constant MAX_LOCK_TIME = 4 * 365 days;
 
@@ -17,6 +18,7 @@ contract MockVotingEscrow is IVotingEscrow {
     mapping(uint256 tokenId => address) private _approvals;
     mapping(uint256 tokenId => LockedBalance) private _locked;
     mapping(uint256 tokenId => bool) public voted;
+    mapping(uint256 tokenId => uint256) private _ownershipChangeBlock;
 
     error NotApprovedOrOwner();
     error NotOwner();
@@ -25,6 +27,7 @@ contract MockVotingEscrow is IVotingEscrow {
     error NotPermanentLock();
     error SameNFT();
     error ZeroAmount();
+    error OwnershipChange();
 
     modifier onlyApprovedOrOwner(uint256 tokenId) {
         if (!isApprovedOrOwner(msg.sender, tokenId)) revert NotApprovedOrOwner();
@@ -71,6 +74,7 @@ contract MockVotingEscrow is IVotingEscrow {
     function unlockPermanent(uint256 tokenId) external onlyApprovedOrOwner(tokenId) {
         if (voted[tokenId]) revert AlreadyVoted();
         if (!_locked[tokenId].isPermanent) revert NotPermanentLock();
+        if (_ownershipChangeBlock[tokenId] == block.number) revert OwnershipChange();
         _locked[tokenId].isPermanent = false;
         _locked[tokenId].end = block.timestamp + MAX_LOCK_TIME;
     }
@@ -108,6 +112,7 @@ contract MockVotingEscrow is IVotingEscrow {
     {
         if (_owners[tokenId] != from) revert NotOwner();
         _owners[tokenId] = to;
+        _ownershipChangeBlock[tokenId] = block.number;
         delete _approvals[tokenId];
     }
 

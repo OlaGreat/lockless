@@ -44,6 +44,7 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
     error ZeroAmount();
     error NoMasterLock();
     error LockVotedThisEpoch();
+    error UnlockPermanentLockFirst();
     error OnlyKeeper();
     error NoRewardsReceiver();
 
@@ -85,12 +86,15 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
     }
 
     /// @notice Merges an existing veMEZO lock into the master lock and mints stMEZO for its MEZO.
-    /// @dev The caller must own the lock and approve the vault first. A lock that voted in the
-    ///      current epoch cannot be reset until the next one, so it is rejected.
+    /// @dev The caller must own the lock and approve the vault first. Two kinds of lock are
+    ///      rejected: one that voted this epoch (votes can only be reset next epoch), and a
+    ///      permanent one (veMEZO forbids unlocking it in the block it changes owner, so its
+    ///      owner unlocks it first).
     function depositLock(uint256 tokenId, address receiver) external nonReentrant {
         _requireNonZeroAddress(receiver);
         _requireMasterLock();
         _requireNotVotedThisEpoch(tokenId);
+        _requireNotPermanent(tokenId);
 
         veMEZO.transferFrom(msg.sender, address(this), tokenId);
         uint256 amount = _absorbLock(tokenId);
@@ -220,17 +224,12 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
 
     function _absorbLock(uint256 tokenId) private returns (uint256 amount) {
         _clearVotes(tokenId);
-        _unlockIfPermanent(tokenId);
         amount = _lockedAmountOf(tokenId);
         veMEZO.merge(tokenId, masterTokenId);
     }
 
     function _clearVotes(uint256 tokenId) private {
         if (veMEZO.voted(tokenId)) voter.reset(tokenId);
-    }
-
-    function _unlockIfPermanent(uint256 tokenId) private {
-        if (veMEZO.locked(tokenId).isPermanent) veMEZO.unlockPermanent(tokenId);
     }
 
     function _lockedAmountOf(uint256 tokenId) private view returns (uint256) {
@@ -251,6 +250,10 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
 
     function _requireNotVotedThisEpoch(uint256 tokenId) private view {
         if (voter.lastVoted(tokenId) >= _currentEpochStart()) revert LockVotedThisEpoch();
+    }
+
+    function _requireNotPermanent(uint256 tokenId) private view {
+        if (veMEZO.locked(tokenId).isPermanent) revert UnlockPermanentLockFirst();
     }
 
     function _requireNonZeroAddress(address account) private pure {

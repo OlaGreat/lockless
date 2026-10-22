@@ -46,15 +46,26 @@ contract LocklessVaultDepositLockTest is VaultTestBase {
         assertEq(stMEZO.balanceOf(bob), USER_LOCK);
     }
 
-    function test_AcceptsPermanentLocks() public {
+    function test_AcceptsAPermanentLockOnceItsOwnerUnlocksIt() public {
+        uint256 tokenId = _createApprovedLock(alice, USER_LOCK);
+        vm.startPrank(alice);
+        ve.lockPermanent(tokenId);
+        ve.unlockPermanent(tokenId);
+
+        vault.depositLock(tokenId, alice);
+        vm.stopPrank();
+
+        assertEq(stMEZO.balanceOf(alice), USER_LOCK);
+    }
+
+    function test_RevertWhen_LockIsStillPermanent() public {
         uint256 tokenId = _createApprovedLock(alice, USER_LOCK);
         vm.prank(alice);
         ve.lockPermanent(tokenId);
 
+        vm.expectRevert(LocklessVault.UnlockPermanentLockFirst.selector);
         vm.prank(alice);
         vault.depositLock(tokenId, alice);
-
-        assertEq(stMEZO.balanceOf(alice), USER_LOCK);
     }
 
     function test_ClearsVotesFromAnEarlierEpoch() public {
