@@ -37,4 +37,12 @@ abstract contract StakingTestBase is Test {
         staking.stake(amount);
         vm.stopPrank();
     }
+
+    function _notify(MockERC20 token, uint256 amount) internal {
+        token.mint(distributor, amount);
+        vm.startPrank(distributor);
+        token.approve(address(staking), amount);
+        staking.notifyRewardAmount(address(token), amount);
+        vm.stopPrank();
+    }
 }
