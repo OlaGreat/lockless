@@ -57,7 +57,13 @@ stMEZO supply always equals the MEZO in the master lock. Rebase growth is minted
 | StMEZOStaking | [`0x04f35c7a37e5A25c5698736f1cB1CD6E0EC7CD93`](https://explorer.test.mezo.org/address/0x04f35c7a37e5A25c5698736f1cB1CD6E0EC7CD93) |
 | RewardHarvester | [`0x91dd4d134DA056CD1B17b0D351f5B3cDCB77cd50`](https://explorer.test.mezo.org/address/0x91dd4d134DA056CD1B17b0D351f5B3cDCB77cd50) |
 
-The deploy script writes these to [`contracts/deployments/31611.json`](contracts/deployments/31611.json), which the keeper and the app read.
+The deploy script writes these to [`contracts/deployments/31611.json`](contracts/deployments/31611.json), which the keeper and the app read. All four are verified with an exact match on [Sourcify](https://repo.sourcify.dev/31611/0xD274D85f935A097252D9B624A45f9Dd1E6B9c671).
+
+Live on testnet:
+
+- Master lock: veMEZO [#923](https://explorer.test.mezo.org/address/0xaCE816CA2bcc9b12C59799dcC5A959Fb9b98111b), permanent.
+- stMEZO/MEZO pool on Mezo Pools: [`0x1b19AC8AB63C094897a5f2285B039843634F5DBC`](https://explorer.test.mezo.org/address/0x1b19AC8AB63C094897a5f2285B039843634F5DBC).
+- First keeper vote, split 87/13 across the two gauges paying incentives that epoch: [transaction](https://explorer.test.mezo.org/tx/0x18727a1d64cc496842703bec2dd51a4517a6229767d12eb4ac46519d91e04e6c).
 
 ## Repository
 
