@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {RewardHarvester} from "../src/RewardHarvester.sol";
 import {StMEZOStaking} from "../src/StMEZOStaking.sol";
 import {IRouter} from "../src/interfaces/IRouter.sol";
+import {ILocklessVault} from "../src/interfaces/ILocklessVault.sol";
 import {HarvesterTestBase} from "./utils/HarvesterTestBase.sol";
 
 contract RewardHarvesterAdminTest is HarvesterTestBase {
@@ -21,20 +22,36 @@ contract RewardHarvesterAdminTest is HarvesterTestBase {
         assertEq(harvester.feeBps(), FEE_BPS);
     }
 
+    function test_TakesMezoFromTheVault() public view {
+        assertEq(address(harvester.vault()), address(vault));
+        assertEq(address(harvester.mezo()), address(mezo));
+    }
+
+    function test_RevertWhen_VaultIsZero() public {
+        vm.expectRevert(RewardHarvester.ZeroAddress.selector);
+        new RewardHarvester(
+            router, musd, staking, ILocklessVault(address(0)), treasury, owner, keeper, FEE_BPS
+        );
+    }
+
     function test_RevertWhen_RouterIsZero() public {
         vm.expectRevert(RewardHarvester.ZeroAddress.selector);
-        new RewardHarvester(IRouter(address(0)), musd, staking, treasury, owner, keeper, FEE_BPS);
+        new RewardHarvester(
+            IRouter(address(0)), musd, staking, vault, treasury, owner, keeper, FEE_BPS
+        );
     }
 
     function test_RevertWhen_MusdIsZero() public {
         vm.expectRevert(RewardHarvester.ZeroAddress.selector);
-        new RewardHarvester(router, IERC20(address(0)), staking, treasury, owner, keeper, FEE_BPS);
+        new RewardHarvester(
+            router, IERC20(address(0)), staking, vault, treasury, owner, keeper, FEE_BPS
+        );
     }
 
     function test_RevertWhen_StakingIsZero() public {
         vm.expectRevert(RewardHarvester.ZeroAddress.selector);
         new RewardHarvester(
-            router, musd, StMEZOStaking(address(0)), treasury, owner, keeper, FEE_BPS
+            router, musd, StMEZOStaking(address(0)), vault, treasury, owner, keeper, FEE_BPS
         );
     }
 
@@ -42,7 +59,7 @@ contract RewardHarvesterAdminTest is HarvesterTestBase {
         uint256 tooHigh = harvester.MAX_FEE_BPS() + 1;
 
         vm.expectRevert(RewardHarvester.FeeTooHigh.selector);
-        new RewardHarvester(router, musd, staking, treasury, owner, keeper, tooHigh);
+        new RewardHarvester(router, musd, staking, vault, treasury, owner, keeper, tooHigh);
     }
 
     function test_OwnerCanChangeTheFee() public {

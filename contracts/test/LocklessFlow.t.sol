@@ -26,8 +26,9 @@ contract LocklessFlowTest is VaultTestBase {
         musd = new MockERC20("Mezo USD", "MUSD");
         bribe = new MockBribe(ve);
         staking = new StMEZOStaking(stMEZO, owner);
-        harvester =
-            new RewardHarvester(new MockRouter(1), musd, staking, treasury, owner, keeper, FEE_BPS);
+        harvester = new RewardHarvester(
+            new MockRouter(1), musd, staking, vault, treasury, owner, keeper, FEE_BPS
+        );
 
         vm.startPrank(owner);
         vault.setRewardsReceiver(address(harvester));
@@ -57,6 +58,23 @@ contract LocklessFlowTest is VaultTestBase {
             staking.earned(alice, address(stMEZO)), (rebaseToStakers * 3) / 4, ROUNDING
         );
         assertEq(musd.balanceOf(treasury), INCENTIVE - toStakers);
+        assertEq(stMEZO.totalSupply(), vault.lockedAmount());
+    }
+
+    function test_MezoIncentivesCompoundIntoStMEZOForStakers() public {
+        _depositAs(alice, 100 ether);
+        _stakeAll(alice);
+        mezo.mint(address(harvester), 30 ether);
+
+        vm.startPrank(keeper);
+        harvester.lockMezo();
+        harvester.distribute(address(stMEZO));
+        vm.stopPrank();
+        vm.warp(block.timestamp + 7 days);
+
+        uint256 toStakers = 30 ether - (30 ether * FEE_BPS) / 10_000;
+        assertApproxEqAbs(staking.earned(alice, address(stMEZO)), toStakers, ROUNDING);
+        assertEq(vault.lockedAmount(), 130 ether);
         assertEq(stMEZO.totalSupply(), vault.lockedAmount());
     }
 

@@ -62,6 +62,10 @@ contract DeployLocklessTest is Test {
         assertEq(deployment.harvester.feeBps(), 1_000);
     }
 
+    function test_LetsTheHarvesterLockMezoIntoTheVault() public view {
+        assertEq(address(deployment.harvester.vault()), address(deployment.vault));
+    }
+
     function test_GivesOwnershipToTheConfiguredOwner() public view {
         assertEq(deployment.vault.owner(), config.owner);
         assertEq(deployment.staking.owner(), config.owner);

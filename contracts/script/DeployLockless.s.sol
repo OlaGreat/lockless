@@ -66,7 +66,7 @@ contract DeployLockless is Script {
         deployment.vault = _deployVault(config);
         deployment.stMEZO = deployment.vault.stMEZO();
         deployment.staking = new StMEZOStaking(deployment.stMEZO, config.owner);
-        deployment.harvester = _deployHarvester(config, deployment.staking);
+        deployment.harvester = _deployHarvester(config, deployment);
         _connect(config, deployment);
     }
 
@@ -95,14 +95,15 @@ contract DeployLockless is Script {
         );
     }
 
-    function _deployHarvester(Config memory config, StMEZOStaking staking)
+    function _deployHarvester(Config memory config, Deployment memory deployment)
         private
         returns (RewardHarvester)
     {
         return new RewardHarvester(
             config.router,
             config.musd,
-            staking,
+            deployment.staking,
+            deployment.vault,
             config.treasury,
             config.owner,
             config.keeper,

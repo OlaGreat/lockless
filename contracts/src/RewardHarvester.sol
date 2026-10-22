@@ -7,10 +7,12 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {StMEZOStaking} from "./StMEZOStaking.sol";
 import {IRouter} from "./interfaces/IRouter.sol";
+import {ILocklessVault} from "./interfaces/ILocklessVault.sol";
 
 /// @title RewardHarvester
-/// @notice Receives what the vault harvests, swaps incentives into MUSD on Mezo Pools, keeps a
-///         protocol fee and streams the rest to stMEZO stakers.
+/// @notice Receives what the vault harvests, swaps incentives into MUSD on Mezo Pools, locks MEZO
+///         incentives into the vault as stMEZO, keeps a protocol fee and streams the rest to
+///         stMEZO stakers.
 contract RewardHarvester is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -20,6 +22,8 @@ contract RewardHarvester is Ownable2Step, ReentrancyGuard {
     IRouter public immutable router;
     IERC20 public immutable musd;
     StMEZOStaking public immutable staking;
+    ILocklessVault public immutable vault;
+    IERC20 public immutable mezo;
 
     address public treasury;
     address public keeper;
@@ -27,6 +31,7 @@ contract RewardHarvester is Ownable2Step, ReentrancyGuard {
 
     event Swapped(address indexed tokenIn, uint256 amountIn, uint256 musdOut);
     event Distributed(address indexed token, uint256 toStakers, uint256 fee);
+    event MezoLocked(uint256 amount);
     event FeeUpdated(uint256 feeBps);
     event TreasuryUpdated(address indexed treasury);
     event KeeperUpdated(address indexed keeper);
@@ -35,6 +40,7 @@ contract RewardHarvester is Ownable2Step, ReentrancyGuard {
     error OnlyKeeper();
     error InvalidRoute();
     error NothingToDistribute();
+    error NothingToLock();
     error FeeTooHigh();
 
     modifier onlyKeeper() {
@@ -46,6 +52,7 @@ contract RewardHarvester is Ownable2Step, ReentrancyGuard {
         IRouter router_,
         IERC20 musd_,
         StMEZOStaking staking_,
+        ILocklessVault vault_,
         address treasury_,
         address owner_,
         address keeper_,
@@ -54,6 +61,7 @@ contract RewardHarvester is Ownable2Step, ReentrancyGuard {
         _requireNonZeroAddress(address(router_));
         _requireNonZeroAddress(address(musd_));
         _requireNonZeroAddress(address(staking_));
+        _requireNonZeroAddress(address(vault_));
         _requireNonZeroAddress(treasury_);
         _requireNonZeroAddress(keeper_);
         _requireFeeWithinCap(feeBps_);
@@ -61,6 +69,8 @@ contract RewardHarvester is Ownable2Step, ReentrancyGuard {
         router = router_;
         musd = musd_;
         staking = staking_;
+        vault = vault_;
+        mezo = vault_.mezo();
         treasury = treasury_;
         keeper = keeper_;
         feeBps = feeBps_;
@@ -84,6 +94,15 @@ contract RewardHarvester is Ownable2Step, ReentrancyGuard {
         musdOut = musd.balanceOf(address(this)) - musdBefore;
 
         emit Swapped(tokenIn, amountIn, musdOut);
+    }
+
+    /// @notice Locks MEZO incentives into the vault, turning them into stMEZO for stakers.
+    function lockMezo() external onlyKeeper nonReentrant returns (uint256 amount) {
+        amount = mezo.balanceOf(address(this));
+        if (amount == 0) revert NothingToLock();
+        mezo.forceApprove(address(vault), amount);
+        vault.deposit(amount, address(this));
+        emit MezoLocked(amount);
     }
 
     /// @notice Sends the protocol fee to the treasury and streams the rest of a token to stakers.

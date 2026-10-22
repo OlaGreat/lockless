@@ -9,11 +9,12 @@ import {StMEZO} from "./StMEZO.sol";
 import {IVotingEscrow} from "./interfaces/IVotingEscrow.sol";
 import {IBoostVoter} from "./interfaces/IBoostVoter.sol";
 import {IRewardsDistributor} from "./interfaces/IRewardsDistributor.sol";
+import {ILocklessVault} from "./interfaces/ILocklessVault.sol";
 
 /// @title LocklessVault
 /// @notice Holds one permanent veMEZO lock (the master lock) and issues stMEZO 1:1 for the MEZO
 ///         inside it.
-contract LocklessVault is Ownable2Step, ReentrancyGuard {
+contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @dev Any valid duration works because the lock becomes permanent in the same transaction.

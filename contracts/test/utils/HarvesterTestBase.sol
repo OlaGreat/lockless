@@ -7,6 +7,7 @@ import {StMEZOStaking} from "../../src/StMEZOStaking.sol";
 import {IRouter} from "../../src/interfaces/IRouter.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockRouter} from "../mocks/MockRouter.sol";
+import {MockLocklessVault} from "../mocks/MockLocklessVault.sol";
 
 abstract contract HarvesterTestBase is Test {
     uint256 internal constant FEE_BPS = 1_000;
@@ -15,6 +16,8 @@ abstract contract HarvesterTestBase is Test {
     MockERC20 internal musd;
     MockERC20 internal btc;
     MockERC20 internal stToken;
+    MockERC20 internal mezo;
+    MockLocklessVault internal vault;
     MockRouter internal router;
     StMEZOStaking internal staking;
     RewardHarvester internal harvester;
@@ -30,11 +33,14 @@ abstract contract HarvesterTestBase is Test {
         musd = new MockERC20("Mezo USD", "MUSD");
         btc = new MockERC20("Bitcoin", "BTC");
         stToken = new MockERC20("Lockless Staked MEZO", "stMEZO");
+        mezo = new MockERC20("Mezo", "MEZO");
+        vault = new MockLocklessVault(mezo, stToken);
         router = new MockRouter(BTC_PRICE_IN_MUSD);
         musd.mint(address(router), 1_000_000_000 ether);
 
         staking = new StMEZOStaking(stToken, owner);
-        harvester = new RewardHarvester(router, musd, staking, treasury, owner, keeper, FEE_BPS);
+        harvester =
+            new RewardHarvester(router, musd, staking, vault, treasury, owner, keeper, FEE_BPS);
 
         vm.startPrank(owner);
         staking.addRewardToken(address(musd), address(harvester), 7 days);
