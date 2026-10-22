@@ -36,6 +36,9 @@ export const harvesterAbi = parseAbi([
   "function distribute(address token)",
 ]);
 
+/** MUSD's BTC/USD price feed. `fetchPrice` updates storage, so it is read with eth_call. */
+export const priceFeedAbi = parseAbi(["function fetchPrice() view returns (uint256)"]);
+
 export const erc20Abi = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
 ]);
