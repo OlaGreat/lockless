@@ -1,0 +1,32 @@
+{
+  "name": "@lockless/app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lockless web app: deposit MEZO, convert veMEZO locks, stake stMEZO.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.62.11",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "viem": "2.21.55",
+    "wagmi": "2.14.6"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.1.0",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "@vitejs/plugin-react": "4.3.4",
+    "jsdom": "25.0.1",
+    "typescript": "5.6.3",
+    "vite": "6.0.5",
+    "vitest": "2.1.8"
+  }
+}
