@@ -28,12 +28,15 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
 
     uint256 public masterTokenId;
     address public keeper;
+    address public rewardsReceiver;
 
     event Deposited(address indexed caller, address indexed receiver, uint256 amount);
     event LockDeposited(
         address indexed caller, address indexed receiver, uint256 indexed tokenId, uint256 amount
     );
     event MasterLockCreated(uint256 indexed tokenId);
+    event KeeperUpdated(address indexed keeper);
+    event RewardsReceiverUpdated(address indexed receiver);
 
     error ZeroAddress();
     error ZeroAmount();
@@ -105,6 +108,20 @@ contract LocklessVault is Ownable2Step, ReentrancyGuard {
     function poke() external {
         _requireMasterLock();
         voter.poke(masterTokenId);
+    }
+
+    /// @notice Replaces the account allowed to vote and harvest.
+    function setKeeper(address newKeeper) external onlyOwner {
+        _requireNonZeroAddress(newKeeper);
+        keeper = newKeeper;
+        emit KeeperUpdated(newKeeper);
+    }
+
+    /// @notice Sets the contract that receives harvested incentives and rebase stMEZO.
+    function setRewardsReceiver(address newReceiver) external onlyOwner {
+        _requireNonZeroAddress(newReceiver);
+        rewardsReceiver = newReceiver;
+        emit RewardsReceiverUpdated(newReceiver);
     }
 
     /// @notice MEZO currently held in the master lock.
