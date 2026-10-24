@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { walletOptions, type DetectedConnector } from "./wallets";
+import { connectionErrorMessage, walletOptions, type DetectedConnector } from "./wallets";
 
 const generic: DetectedConnector = { id: "injected", name: "Injected", type: "injected" };
 const metaMask: DetectedConnector = {
@@ -44,5 +44,25 @@ describe("walletOptions", () => {
 
   it("returns nothing when no wallet is installed", () => {
     expect(walletOptions([])).toEqual([]);
+  });
+});
+
+describe("connectionErrorMessage", () => {
+  it("names the wallet and gives its short reason", () => {
+    const error = { shortMessage: "User rejected the request.", message: "long details" };
+
+    expect(connectionErrorMessage("MetaMask", error)).toBe("MetaMask: User rejected the request.");
+  });
+
+  it("uses the first line of the message when there is no short reason", () => {
+    const error = { message: "wallet must has at least one account\nmore details" };
+
+    expect(connectionErrorMessage("Rabby Wallet", error)).toBe(
+      "Rabby Wallet: wallet must has at least one account",
+    );
+  });
+
+  it("falls back to a plain sentence for unknown errors", () => {
+    expect(connectionErrorMessage("MetaMask", {})).toBe("MetaMask: could not connect.");
   });
 });

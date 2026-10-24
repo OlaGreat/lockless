@@ -44,3 +44,14 @@ function uniqueById(connectors: DetectedConnector[]): DetectedConnector[] {
 function toOption(connector: DetectedConnector): WalletOption {
   return { id: connector.id, name: connector.name, icon: connector.icon };
 }
+
+interface ConnectionError {
+  shortMessage?: string;
+  message?: string;
+}
+
+/** A one-line explanation of why connecting to a wallet failed. */
+export function connectionErrorMessage(walletName: string, error: ConnectionError): string {
+  const reason = error.shortMessage ?? error.message?.split("\n")[0] ?? "could not connect.";
+  return `${walletName}: ${reason}`;
+}
