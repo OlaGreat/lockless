@@ -346,6 +346,99 @@ a {
   font-size: 0.9rem;
 }
 
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 6, 9, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dialog__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialog__header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.dialog__close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wallets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wallet {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wallet:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.wallet:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.wallet img,
+.wallet__blank {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.wallet__blank {
+  background: var(--border);
+}
+
+.wallet span:nth-of-type(2),
+.wallet img + span {
+  flex: 1;
+}
+
 @media (max-width: 640px) {
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
