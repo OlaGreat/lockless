@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/lockless-logo-on-dark.png">
+  <img src="brand/lockless-logo-on-light.png" alt="Lockless" width="480">
+</picture>
+
 # Lockless
 
 **Liquid veMEZO for Mezo Earn.** Lock MEZO forever, stay liquid, earn MUSD.
