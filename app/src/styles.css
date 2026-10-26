@@ -45,13 +45,17 @@ a {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
   font-size: 1.25rem;
   letter-spacing: 0.01em;
 }
 
 .brand__mark {
-  color: var(--accent);
+  width: 30px;
+  height: 30px;
 }
 
 .hero {

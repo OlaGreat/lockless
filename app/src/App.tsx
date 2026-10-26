@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
+import { Brand } from "./components/Brand";
 import { ConnectButton } from "./components/ConnectButton";
 import { ConvertPanel } from "./components/ConvertPanel";
 import { DepositPanel } from "./components/DepositPanel";
@@ -15,9 +16,7 @@ export function App() {
   return (
     <div className="page">
       <header className="topbar">
-        <div className="brand">
-          <span className="brand__mark" aria-hidden>◆</span> Lockless
-        </div>
+        <Brand />
         <ConnectButton />
       </header>
       <section className="hero">
