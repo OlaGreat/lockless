@@ -11,6 +11,8 @@ Lockless holds one permanent veMEZO lock. Anyone can add MEZO to it, or merge an
 
 Built for the Mezo Buildathon, Track 1 (DeFi): a staking derivative for MEZO that plugs straight into Mezo's vote-escrow system.
 
+**Live app (Mezo testnet):** https://olagreat.github.io/lockless/
+
 ## Why
 
 - **veMEZO is a 4-year lock.** It only earns if the holder votes on boost gauges and claims every week. Most holders cannot do that well, and nobody can leave early.
