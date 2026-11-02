@@ -48,6 +48,30 @@ abstract contract VaultTestBase is Test {
         vault.deposit(amount, user);
     }
 
+    function _createLock(address user, uint256 amount) internal returns (uint256 tokenId) {
+        mezo.mint(user, amount);
+        vm.startPrank(user);
+        mezo.approve(address(ve), amount);
+        tokenId = ve.createLock(amount, 52 weeks);
+        vm.stopPrank();
+    }
+
+    function _createApprovedLock(address user, uint256 amount) internal returns (uint256 tokenId) {
+        tokenId = _createLock(user, amount);
+        vm.prank(user);
+        ve.approve(address(vault), tokenId);
+    }
+
+    /// @dev Votes a user's lock for the given gauges with equal weights.
+    function _voteFor(address user, uint256 tokenId, address[] memory gauges) internal {
+        uint256[] memory weights = new uint256[](gauges.length);
+        for (uint256 i = 0; i < gauges.length; i++) {
+            weights[i] = 1;
+        }
+        vm.prank(user);
+        voter.vote(tokenId, gauges, weights);
+    }
+
     function _masterLock() internal view returns (IVotingEscrow.LockedBalance memory) {
         return ve.locked(vault.masterTokenId());
     }

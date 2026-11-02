@@ -9,6 +9,7 @@ import {StMEZO} from "./StMEZO.sol";
 import {IVotingEscrow} from "./interfaces/IVotingEscrow.sol";
 import {IBoostVoter} from "./interfaces/IBoostVoter.sol";
 import {IRewardsDistributor} from "./interfaces/IRewardsDistributor.sol";
+import {IReward} from "./interfaces/IReward.sol";
 import {ILocklessVault} from "./interfaces/ILocklessVault.sol";
 
 /// @title LocklessVault
@@ -36,6 +37,9 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
         address indexed caller, address indexed receiver, uint256 indexed tokenId, uint256 amount
     );
     event MasterLockCreated(uint256 indexed tokenId);
+    event LockIncentivePaid(
+        uint256 indexed tokenId, address indexed token, address indexed receiver, uint256 amount
+    );
     event RewardForwarded(address indexed token, uint256 amount);
     event RebaseDistributed(uint256 amount);
     event KeeperUpdated(address indexed keeper);
@@ -99,6 +103,7 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
         _requireNotPermanent(tokenId);
 
         veMEZO.transferFrom(msg.sender, address(this), tokenId);
+        _payLockIncentives(tokenId, receiver);
         uint256 amount = _absorbLock(tokenId);
         stMEZO.mint(receiver, amount);
 
@@ -227,6 +232,79 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
         if (balance == 0) return;
         token.safeTransfer(rewardsReceiver, balance);
         emit RewardForwarded(address(token), balance);
+    }
+
+    /// @dev Must run while the vault owns the lock and before its votes are reset: Mezo pays
+    ///      incentives to the lock's current owner, and a reset forgets which gauges it voted for.
+    function _payLockIncentives(uint256 tokenId, address receiver) private {
+        for (uint256 i = 0;; i++) {
+            (bool found, address gauge) = _votedGaugeAt(tokenId, i);
+            if (!found) return;
+            _payBribe(voter.gaugeToBribe(gauge), tokenId, receiver);
+        }
+    }
+
+    function _votedGaugeAt(uint256 tokenId, uint256 index)
+        private
+        view
+        returns (bool found, address gauge)
+    {
+        try voter.gaugeVote(tokenId, index) returns (address votedGauge) {
+            return (true, votedGauge);
+        } catch {
+            return (false, address(0));
+        }
+    }
+
+    function _payBribe(address bribe, uint256 tokenId, address receiver) private {
+        if (bribe == address(0)) return;
+        address[] memory tokens = _rewardTokensOf(IReward(bribe));
+        uint256[] memory balancesBefore = _balancesOf(tokens);
+        _claimBribe(bribe, tokens, tokenId);
+        _sendGains(tokenId, tokens, balancesBefore, receiver);
+    }
+
+    function _rewardTokensOf(IReward bribe) private view returns (address[] memory tokens) {
+        tokens = new address[](bribe.rewardsListLength());
+        for (uint256 i = 0; i < tokens.length; i++) {
+            tokens[i] = bribe.rewards(i);
+        }
+    }
+
+    function _balancesOf(address[] memory tokens) private view returns (uint256[] memory balances) {
+        balances = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            balances[i] = IERC20(tokens[i]).balanceOf(address(this));
+        }
+    }
+
+    function _claimBribe(address bribe, address[] memory tokens, uint256 tokenId) private {
+        address[] memory bribes = new address[](1);
+        bribes[0] = bribe;
+        address[][] memory tokenGroups = new address[][](1);
+        tokenGroups[0] = tokens;
+        voter.claimBribes(bribes, tokenGroups, tokenId);
+    }
+
+    function _sendGains(
+        uint256 tokenId,
+        address[] memory tokens,
+        uint256[] memory balancesBefore,
+        address receiver
+    ) private {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            _sendGain(tokenId, IERC20(tokens[i]), balancesBefore[i], receiver);
+        }
+    }
+
+    function _sendGain(uint256 tokenId, IERC20 token, uint256 balanceBefore, address receiver)
+        private
+    {
+        uint256 balance = token.balanceOf(address(this));
+        if (balance <= balanceBefore) return;
+        uint256 gain = balance - balanceBefore;
+        token.safeTransfer(receiver, gain);
+        emit LockIncentivePaid(tokenId, address(token), receiver, gain);
     }
 
     function _absorbLock(uint256 tokenId) private returns (uint256 amount) {

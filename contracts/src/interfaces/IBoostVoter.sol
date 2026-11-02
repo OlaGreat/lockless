@@ -13,4 +13,9 @@ interface IBoostVoter {
         external;
 
     function lastVoted(uint256 tokenId) external view returns (uint256);
+
+    /// @notice A gauge the lock votes for, by position. Reverts past the end of the list.
+    function gaugeVote(uint256 tokenId, uint256 index) external view returns (address);
+
+    function gaugeToBribe(address gauge) external view returns (address);
 }

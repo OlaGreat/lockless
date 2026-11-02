@@ -124,26 +124,9 @@ contract LocklessVaultDepositLockTest is VaultTestBase {
         freshVault.depositLock(tokenId, alice);
     }
 
-    function _createLock(address user, uint256 amount) internal returns (uint256 tokenId) {
-        mezo.mint(user, amount);
-        vm.startPrank(user);
-        mezo.approve(address(ve), amount);
-        tokenId = ve.createLock(amount, 52 weeks);
-        vm.stopPrank();
-    }
-
-    function _createApprovedLock(address user, uint256 amount) internal returns (uint256 tokenId) {
-        tokenId = _createLock(user, amount);
-        vm.prank(user);
-        ve.approve(address(vault), tokenId);
-    }
-
     function _voteAs(address user, uint256 tokenId) internal {
         address[] memory gauges = new address[](1);
         gauges[0] = makeAddr("gauge");
-        uint256[] memory weights = new uint256[](1);
-        weights[0] = 1;
-        vm.prank(user);
-        voter.vote(tokenId, gauges, weights);
+        _voteFor(user, tokenId, gauges);
     }
 }
