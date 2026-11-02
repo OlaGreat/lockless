@@ -48,6 +48,7 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
     error UnlockPermanentLockFirst();
     error OnlyKeeper();
     error NoRewardsReceiver();
+    error RewardsReceiverAlreadySet();
 
     modifier onlyKeeper() {
         if (msg.sender != keeper) revert OnlyKeeper();
@@ -160,8 +161,10 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
     }
 
     /// @notice Sets the contract that receives harvested incentives and rebase stMEZO.
+    /// @dev Can be set only once, so the owner can never redirect what stakers earn.
     function setRewardsReceiver(address newReceiver) external onlyOwner {
         _requireNonZeroAddress(newReceiver);
+        _requireNoRewardsReceiver();
         rewardsReceiver = newReceiver;
         emit RewardsReceiverUpdated(newReceiver);
     }
@@ -247,6 +250,10 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
 
     function _requireRewardsReceiver() private view {
         if (rewardsReceiver == address(0)) revert NoRewardsReceiver();
+    }
+
+    function _requireNoRewardsReceiver() private view {
+        if (rewardsReceiver != address(0)) revert RewardsReceiverAlreadySet();
     }
 
     function _requireNotVotedThisEpoch(uint256 tokenId) private view {

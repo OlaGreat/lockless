@@ -62,6 +62,15 @@ contract LocklessVaultAdminTest is VaultTestBase {
         vault.setRewardsReceiver(harvester);
     }
 
+    function test_RevertWhen_OwnerChangesTheRewardsReceiverAfterSettingIt() public {
+        vm.startPrank(owner);
+        vault.setRewardsReceiver(harvester);
+
+        vm.expectRevert(LocklessVault.RewardsReceiverAlreadySet.selector);
+        vault.setRewardsReceiver(owner);
+        vm.stopPrank();
+    }
+
     function test_RevertWhen_RewardsReceiverIsZero() public {
         vm.expectRevert(LocklessVault.ZeroAddress.selector);
         vm.prank(owner);
