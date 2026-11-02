@@ -16,6 +16,12 @@ remappings = [
 [fuzz]
 runs = 512
 
+# Kept small so the default run stays quick. Go deeper with FOUNDRY_INVARIANT_RUNS and
+# FOUNDRY_INVARIANT_DEPTH.
+[invariant]
+runs = 128
+depth = 200
+
 [rpc_endpoints]
 mezo_testnet = "https://rpc.test.mezo.org"
 
