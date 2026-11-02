@@ -17,6 +17,12 @@ interface IVeMEZOTestHelpers {
 interface IBoostVoterTestHelpers {
     function gauges(uint256 index) external view returns (address);
     function isAlive(address gauge) external view returns (bool);
+    function addBribes(address gauge, address[] calldata tokens, uint256[] calldata amounts)
+        external;
+}
+
+interface IRewardTestHelpers {
+    function earned(address token, uint256 tokenId) external view returns (uint256);
 }
 
 /// @notice Runs the vault against the real Mezo testnet contracts on a local fork.
@@ -38,6 +44,7 @@ contract LocklessVaultForkTest is Test {
     address internal owner = makeAddr("owner");
     address internal keeper = makeAddr("keeper");
     address internal alice = makeAddr("alice");
+    address internal bob = makeAddr("bob");
     address internal harvester = makeAddr("harvester");
 
     modifier onlyWhenForking() {
@@ -124,6 +131,40 @@ contract LocklessVaultForkTest is Test {
         assertEq(stMEZO.balanceOf(alice), 500 ether);
     }
 
+    function test_PaysARealLocksIncentivesWhenConverting() public onlyWhenForking {
+        _depositAs(owner, 1 ether);
+        uint256 tokenId = _createApprovedLock(alice, 500 ether);
+        _voteAs(alice, tokenId);
+        _addMezoIncentive(100 ether);
+        vm.warp(block.timestamp + EPOCH);
+        uint256 earned = _mezoEarnedOnFirstGauge(tokenId);
+
+        vm.prank(alice);
+        vault.depositLock(tokenId, bob);
+
+        assertGt(earned, 0);
+        assertEq(MEZO.balanceOf(bob), earned);
+        assertEq(stMEZO.balanceOf(bob), 500 ether);
+    }
+
+    function test_LeavesTheMasterLocksRealIncentivesInPlace() public onlyWhenForking {
+        _depositAs(owner, 1_000 ether);
+        (address[] memory gauges, uint256[] memory weights) = _singleLiveGaugeVote();
+        vm.prank(keeper);
+        vault.vote(gauges, weights);
+        uint256 tokenId = _createApprovedLock(alice, 500 ether);
+        _voteAs(alice, tokenId);
+        _addMezoIncentive(100 ether);
+        vm.warp(block.timestamp + EPOCH);
+        uint256 masterEarned = _mezoEarnedOnFirstGauge(vault.masterTokenId());
+
+        vm.prank(alice);
+        vault.depositLock(tokenId, bob);
+
+        assertGt(masterEarned, 0);
+        assertEq(_mezoEarnedOnFirstGauge(vault.masterTokenId()), masterEarned);
+    }
+
     function test_RejectsALockThatVotedThisEpoch() public onlyWhenForking {
         _depositAs(owner, 1 ether);
         uint256 tokenId = _createApprovedLock(alice, 500 ether);
@@ -179,6 +220,24 @@ contract LocklessVaultForkTest is Test {
         (address[] memory gauges, uint256[] memory weights) = _singleLiveGaugeVote();
         vm.prank(user);
         VOTER.vote(tokenId, gauges, weights);
+    }
+
+    function _addMezoIncentive(uint256 amount) internal {
+        address briber = makeAddr("briber");
+        _giveMezo(briber, amount);
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(MEZO);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = amount;
+        vm.startPrank(briber);
+        MEZO.approve(address(VOTER), amount);
+        IBoostVoterTestHelpers(address(VOTER)).addBribes(_firstLiveGauge(), tokens, amounts);
+        vm.stopPrank();
+    }
+
+    function _mezoEarnedOnFirstGauge(uint256 tokenId) internal view returns (uint256) {
+        address bribe = VOTER.gaugeToBribe(_firstLiveGauge());
+        return IRewardTestHelpers(bribe).earned(address(MEZO), tokenId);
     }
 
     function _singleLiveGaugeVote()
