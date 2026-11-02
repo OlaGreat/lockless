@@ -65,6 +65,22 @@ contract LocklessVaultRebaseTest is VaultTestBase {
         assertEq(stMEZO.totalSupply(), DEPOSIT);
     }
 
+    function test_DistributeRebaseMintsNothingWhenTheLockReportsLessThanSupply() public {
+        ve.shrinkLock(vault.masterTokenId(), 1 ether);
+
+        vault.distributeRebase();
+
+        assertEq(stMEZO.balanceOf(harvester), 0);
+    }
+
+    function test_ClaimRebaseStillWorksAfterTheLockReportedLessThanSupply() public {
+        ve.shrinkLock(vault.masterTokenId(), 1 ether);
+
+        vault.claimRebase();
+
+        assertEq(stMEZO.balanceOf(harvester), REBASE - 1 ether);
+    }
+
     function test_ClaimingTwiceDoesNotMintTwice() public {
         vault.claimRebase();
         vault.claimRebase();

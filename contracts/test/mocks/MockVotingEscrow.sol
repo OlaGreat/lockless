@@ -116,6 +116,11 @@ contract MockVotingEscrow is IVotingEscrow {
         delete _approvals[tokenId];
     }
 
+    /// @dev Test hook: makes a lock report less MEZO, as an upgraded veMEZO might.
+    function shrinkLock(uint256 tokenId, uint256 value) external {
+        _locked[tokenId].amount -= _toInt128(value);
+    }
+
     function voting(uint256 tokenId, bool hasVoted) external {
         voted[tokenId] = hasVoted;
     }

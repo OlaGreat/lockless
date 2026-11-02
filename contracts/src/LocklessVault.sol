@@ -203,8 +203,11 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
         emit RebaseDistributed(growth);
     }
 
+    /// @dev Returns zero rather than reverting if veMEZO ever reports less than the supply.
     function _unbackedMezo() private view returns (uint256) {
-        return lockedAmount() - stMEZO.totalSupply();
+        uint256 locked = lockedAmount();
+        uint256 supply = stMEZO.totalSupply();
+        return locked > supply ? locked - supply : 0;
     }
 
     function _forwardAll(address[][] calldata tokenGroups) private {
