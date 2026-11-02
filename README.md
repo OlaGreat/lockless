@@ -40,9 +40,9 @@ With Lockless, a 1,000 MEZO lock becomes 1,000 stMEZO instead of 600 MEZO from t
 ```
 
 1. **Deposit.** `LocklessVault.deposit` adds MEZO to the master lock and mints the same amount of stMEZO. The first deposit creates the lock and makes it permanent.
-2. **Convert a lock.** `LocklessVault.depositLock` takes a user's veMEZO NFT, clears its old votes and merges it into the master lock, minting stMEZO for the MEZO inside.
+2. **Convert a lock.** `LocklessVault.depositLock` takes a user's veMEZO NFT, pays out the incentives it earned on the gauges it votes for, keeps its pending rebase, clears its old votes and merges it into the master lock, minting stMEZO for all the MEZO inside.
 3. **Vote.** Each epoch the keeper reads every live boost gauge, values its incentives in USD and splits the lock's votes so every chosen gauge pays the same on its last vote (water-filling). Mezo allows 30 gauges per vote, so the plan keeps the best 30.
-4. **Harvest.** After the epoch ends, the keeper claims the incentives and the veMEZO rebase. The harvester swaps BTC to MUSD, locks MEZO into the vault as stMEZO, keeps the protocol fee and streams the rest to stakers over seven days.
+4. **Harvest.** After the epoch ends, the keeper claims the incentives and the veMEZO rebase. The harvester swaps BTC to MUSD, never for less than 97% of Mezo's BTC oracle price, locks MEZO into the vault as stMEZO, keeps the protocol fee and streams the rest to stakers over seven days. If nobody is staked, the stream waits for the first staker instead of being lost.
 
 stMEZO supply always equals the MEZO in the master lock. Rebase growth is minted as stMEZO rewards, so the 1:1 backing holds.
 
@@ -83,7 +83,7 @@ app/         React + wagmi web app: deposit, convert a lock, stake
 ## Run the tests
 
 ```bash
-# Contracts: unit tests against mocks that follow veMEZO's rules
+# Contracts: unit, fuzz and invariant tests against mocks that follow Mezo's rules
 cd contracts && forge test
 
 # Contracts: the vault against the real Mezo testnet veMEZO and boost voter
@@ -132,9 +132,15 @@ Connect a browser wallet on Mezo testnet. Get test BTC and MEZO from the [faucet
 
 - **stMEZO cannot be redeemed for MEZO.** The master lock is permanent, so holders leave by selling stMEZO, for example in a stMEZO/MEZO pool. Every liquid locker works this way. Yield and pool depth support the price.
 - **Permanent locks need one extra step.** veMEZO forbids unlocking a permanent lock in the block it changes owner, so its owner turns off the permanent flag before converting. The app guides this.
-- **A lock that voted this epoch waits until Thursday.** Its votes can only be reset in a new epoch.
-- **Claim your lock's rewards before converting.** Rewards owed to a lock stay with that lock after it merges.
-- **The keeper is trusted** to choose gauges. It cannot move user funds. Wave 2 adds on-chain limits on its votes.
+- **A lock that voted this epoch waits until Thursday.** Its votes can only be reset in a new epoch, and not in that epoch's first hour.
+- **Incentives on gauges a lock no longer votes for are not found automatically.** Converting pays out what the lock earned on the gauges it votes for now. Claim older ones on Mezo first.
+- **A lock with a pending rebase waits for Mezo's weekly update.** Until Mezo starts the new week, conversion reverts rather than lose the rebase.
+- **The keeper is trusted** to choose gauges. It cannot move user funds, redirect rewards or sell BTC below 97% of the oracle price. On-chain limits on its votes are planned.
+- **The owner is a single testnet wallet.** It can change the keeper and set the fee up to the 20% cap. It cannot redirect rewards: the rewards receiver can be set only once. Mainnet ownership moves to a multisig behind a timelock.
+
+## Security
+
+Lockless has not been audited. The [security review](docs/security-review.md) lists every known finding, who reported it, how it was fixed and the trust assumptions that remain. Thanks to KupiaSec and the Wave 1 judges for their reports.
 
 ## Roadmap (Wave 2)
 
