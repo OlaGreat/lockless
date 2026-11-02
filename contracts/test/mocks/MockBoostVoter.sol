@@ -5,20 +5,25 @@ import {IBoostVoter} from "../../src/interfaces/IBoostVoter.sol";
 import {MockVotingEscrow} from "./MockVotingEscrow.sol";
 import {MockBribe} from "./MockBribe.sol";
 
-/// @notice Follows the boost voter rules Lockless relies on: one vote or reset per lock per
-///         epoch, owner or approved callers only, and incentives paid to the lock owner.
+/// @notice Follows the boost voter rules Lockless relies on (tigris NonStakingVoter): one vote or
+///         reset per lock per epoch, never in the first hour of an epoch, owner or approved
+///         callers only, reset clears the lock's gauge list, and incentives are paid to the lock
+///         owner. Error names match the real contract.
 contract MockBoostVoter is IBoostVoter {
     uint256 private constant WEEK = 1 weeks;
+    uint256 private constant DISTRIBUTE_WINDOW = 1 hours;
 
     MockVotingEscrow public immutable ve;
 
     mapping(uint256 tokenId => uint256) public lastVoted;
     mapping(uint256 tokenId => uint256) public pokeCount;
-    mapping(uint256 tokenId => address[]) private _gauges;
+    mapping(uint256 tokenId => address[]) public gaugeVote;
+    mapping(address gauge => address) public gaugeToBribe;
     mapping(uint256 tokenId => uint256[]) private _weights;
 
     error NotApprovedOrOwner();
     error AlreadyVotedOrDeposited();
+    error DistributeWindow();
 
     modifier onlyApprovedOrOwner(uint256 tokenId) {
         if (!ve.isApprovedOrOwner(msg.sender, tokenId)) revert NotApprovedOrOwner();
@@ -26,14 +31,19 @@ contract MockBoostVoter is IBoostVoter {
     }
 
     modifier onlyNewEpoch(uint256 tokenId) {
-        if ((block.timestamp / WEEK) * WEEK <= lastVoted[tokenId]) {
-            revert AlreadyVotedOrDeposited();
-        }
+        uint256 epochStart = (block.timestamp / WEEK) * WEEK;
+        if (epochStart <= lastVoted[tokenId]) revert AlreadyVotedOrDeposited();
+        if (block.timestamp <= epochStart + DISTRIBUTE_WINDOW) revert DistributeWindow();
         _;
     }
 
     constructor(MockVotingEscrow ve_) {
         ve = ve_;
+    }
+
+    /// @dev Test hook: registers the incentive contract of a gauge.
+    function setBribe(address gauge, address bribe) external {
+        gaugeToBribe[gauge] = bribe;
     }
 
     function vote(uint256 tokenId, address[] calldata gauges, uint256[] calldata weights)
@@ -42,18 +52,21 @@ contract MockBoostVoter is IBoostVoter {
         onlyApprovedOrOwner(tokenId)
     {
         lastVoted[tokenId] = block.timestamp;
-        _gauges[tokenId] = gauges;
+        gaugeVote[tokenId] = gauges;
         _weights[tokenId] = weights;
         ve.voting(tokenId, true);
     }
 
     function reset(uint256 tokenId) external onlyNewEpoch(tokenId) onlyApprovedOrOwner(tokenId) {
-        delete _gauges[tokenId];
+        delete gaugeVote[tokenId];
         delete _weights[tokenId];
         ve.voting(tokenId, false);
     }
 
     function poke(uint256 tokenId) external {
+        if (block.timestamp <= (block.timestamp / WEEK) * WEEK + DISTRIBUTE_WINDOW) {
+            revert DistributeWindow();
+        }
         pokeCount[tokenId] += 1;
     }
 
@@ -67,7 +80,7 @@ contract MockBoostVoter is IBoostVoter {
     }
 
     function votedGauges(uint256 tokenId) external view returns (address[] memory) {
-        return _gauges[tokenId];
+        return gaugeVote[tokenId];
     }
 
     function votedWeights(uint256 tokenId) external view returns (uint256[] memory) {

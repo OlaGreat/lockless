@@ -24,7 +24,7 @@ contract LocklessFlowTest is VaultTestBase {
     function setUp() public override {
         super.setUp();
         musd = new MockERC20("Mezo USD", "MUSD");
-        bribe = new MockBribe(ve);
+        bribe = new MockBribe(ve, address(voter));
         staking = new StMEZOStaking(stMEZO, owner);
         harvester = new RewardHarvester(
             new MockRouter(1), musd, staking, vault, treasury, owner, keeper, FEE_BPS
@@ -97,7 +97,7 @@ contract LocklessFlowTest is VaultTestBase {
 
     function _nextEpochIncentivesArrive() internal {
         vm.warp(block.timestamp + 7 days);
-        musd.mint(address(bribe), INCENTIVE);
+        bribe.addEarned(address(musd), vault.masterTokenId(), INCENTIVE);
         mezo.mint(address(distributor), REBASE);
         distributor.setPending(vault.masterTokenId(), REBASE);
     }

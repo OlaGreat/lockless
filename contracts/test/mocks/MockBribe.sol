@@ -1,23 +1,63 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IVotingEscrow} from "../../src/interfaces/IVotingEscrow.sol";
+import {MockVotingEscrow} from "./MockVotingEscrow.sol";
+import {MockERC20} from "./MockERC20.sol";
 
-/// @notice Pays its whole balance of each requested token to the owner of the lock, like a
-///         boost gauge incentive contract does after an epoch ends.
+/// @notice Follows the rules of Mezo's incentive contract (tigris VotingReward and Reward) that
+///         Lockless relies on: each lock earns its own amount per token, only the lock's owner,
+///         an approved address or the voter may claim, and payment goes to the lock's current
+///         owner. A burned lock has no owner, so its rewards can no longer be paid.
 contract MockBribe {
-    IVotingEscrow public immutable ve;
+    MockVotingEscrow public immutable ve;
+    address public immutable voter;
 
-    constructor(IVotingEscrow ve_) {
+    address[] public rewards;
+    mapping(address token => bool) public isReward;
+    mapping(uint256 tokenId => mapping(address token => uint256)) private _earned;
+
+    error NotAuthorized();
+
+    constructor(MockVotingEscrow ve_, address voter_) {
         ve = ve_;
+        voter = voter_;
+    }
+
+    /// @dev Test hook: funds this contract and credits the amount to one lock.
+    function addEarned(address token, uint256 tokenId, uint256 amount) external {
+        _registerReward(token);
+        MockERC20(token).mint(address(this), amount);
+        _earned[tokenId][token] += amount;
     }
 
     function getReward(uint256 tokenId, address[] calldata tokens) external {
+        if (!ve.isApprovedOrOwner(msg.sender, tokenId) && msg.sender != voter) {
+            revert NotAuthorized();
+        }
         address owner = ve.ownerOf(tokenId);
         for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20 token = IERC20(tokens[i]);
-            token.transfer(owner, token.balanceOf(address(this)));
+            _pay(owner, tokenId, tokens[i]);
         }
+    }
+
+    function earned(address token, uint256 tokenId) external view returns (uint256) {
+        return _earned[tokenId][token];
+    }
+
+    function rewardsListLength() external view returns (uint256) {
+        return rewards.length;
+    }
+
+    function _pay(address owner, uint256 tokenId, address token) private {
+        uint256 amount = _earned[tokenId][token];
+        if (amount == 0) return;
+        _earned[tokenId][token] = 0;
+        MockERC20(token).transfer(owner, amount);
+    }
+
+    function _registerReward(address token) private {
+        if (isReward[token]) return;
+        isReward[token] = true;
+        rewards.push(token);
     }
 }

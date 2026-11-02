@@ -23,11 +23,12 @@ contract LocklessVaultHarvestTest is VaultTestBase {
 
         musd = new MockERC20("Mezo USD", "MUSD");
         btc = new MockERC20("Bitcoin", "BTC");
-        bribeA = new MockBribe(ve);
-        bribeB = new MockBribe(ve);
-        musd.mint(address(bribeA), 30 ether);
-        btc.mint(address(bribeB), 2 ether);
-        musd.mint(address(bribeB), 5 ether);
+        bribeA = new MockBribe(ve, address(voter));
+        bribeB = new MockBribe(ve, address(voter));
+        uint256 master = vault.masterTokenId();
+        bribeA.addEarned(address(musd), master, 30 ether);
+        bribeB.addEarned(address(btc), master, 2 ether);
+        bribeB.addEarned(address(musd), master, 5 ether);
     }
 
     function test_HarvestSendsClaimedIncentivesToTheReceiver() public {
