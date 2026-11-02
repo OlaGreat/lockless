@@ -1,5 +1,12 @@
 import type { WalletClient } from "viem";
-import { planRewardSteps, type HarvesterBalances, type RewardStep } from "../decisions";
+import {
+  btcSwapMinimum,
+  planConversions,
+  planDistributions,
+  type Conversion,
+  type Distribution,
+  type HarvesterBalances,
+} from "../decisions";
 import { erc20Abi, harvesterAbi, routerAbi, vaultAbi } from "../mezo/abis";
 import { sendAndWait, type WriteCall } from "../mezo/chain";
 import { readEarnedIncentives, toHarvestArguments } from "../mezo/harvestPlan";
@@ -7,9 +14,6 @@ import { readOpportunities } from "../mezo/opportunities";
 import { createPriceBook } from "../valuation";
 import type { KeeperContext } from "./context";
 import { readMasterTokenId } from "./plan";
-
-/** Accepts at most 1% less MUSD than the router quotes when swapping BTC incentives. */
-const SLIPPAGE_BPS = 100n;
 
 /** Claims incentives and the rebase, converts rewards and streams them to stakers. */
 export async function runHarvest(ctx: KeeperContext, signer: WalletClient): Promise<void> {
@@ -44,16 +48,23 @@ async function claimRebase(ctx: KeeperContext, signer: WalletClient): Promise<vo
   }
 }
 
+/** Converts first, then streams what the harvester actually holds, since a swap may be skipped. */
 async function processRewards(ctx: KeeperContext, signer: WalletClient): Promise<void> {
-  const steps = planRewardSteps(await readHarvesterBalances(ctx));
-  if (steps.length === 0) ctx.log("Nothing for the harvester to distribute.");
-  for (const step of steps) await runRewardStep(ctx, signer, step);
+  for (const step of planConversions(await readHarvesterBalances(ctx))) {
+    await runConversion(ctx, signer, step);
+  }
+  const distributions = planDistributions(await readHarvesterBalances(ctx));
+  if (distributions.length === 0) ctx.log("Nothing for the harvester to distribute.");
+  for (const step of distributions) await runDistribution(ctx, signer, step);
 }
 
-async function runRewardStep(ctx: KeeperContext, signer: WalletClient, step: RewardStep): Promise<void> {
-  const { contracts } = ctx.config;
+async function runConversion(ctx: KeeperContext, signer: WalletClient, step: Conversion): Promise<void> {
   if (step === "lockMezo") await send(ctx, signer, "Locked MEZO incentives", harvesterCall(ctx, "lockMezo"));
   if (step === "swapBtcToMusd") await swapBtcToMusd(ctx, signer);
+}
+
+async function runDistribution(ctx: KeeperContext, signer: WalletClient, step: Distribution): Promise<void> {
+  const { contracts } = ctx.config;
   if (step === "distributeMusd") {
     await send(ctx, signer, "Streamed MUSD to stakers", harvesterCall(ctx, "distribute", [contracts.musd]));
   }
@@ -72,9 +83,16 @@ async function swapBtcToMusd(ctx: KeeperContext, signer: WalletClient): Promise<
   const [amounts] = await ctx.reader.readAll<bigint[]>([
     { address: contracts.router, abi: routerAbi, functionName: "getAmountsOut", args: [amountIn, routes] },
   ]);
-  const quoted = amounts?.at(-1) ?? 0n;
-  const minOut = (quoted * (10_000n - SLIPPAGE_BPS)) / 10_000n;
-  await send(ctx, signer, "Swapped BTC incentives to MUSD", harvesterCall(ctx, "swapToMusd", [contracts.btc, amountIn, minOut, routes]));
+  const [oracleFloor] = await ctx.reader.readAll<bigint>([
+    { address: contracts.harvester, abi: harvesterAbi, functionName: "oracleFloor", args: [amountIn] },
+  ]);
+  const decision = btcSwapMinimum(amounts?.at(-1) ?? 0n, oracleFloor ?? 0n);
+  if (!decision.swap) {
+    ctx.log(`BTC not swapped: ${decision.reason}.`);
+    return;
+  }
+  const args = [amountIn, decision.minOut, routes];
+  await send(ctx, signer, "Swapped BTC incentives to MUSD", harvesterCall(ctx, "swapBtcToMusd", args));
 }
 
 async function readHarvesterBalances(ctx: KeeperContext): Promise<HarvesterBalances> {

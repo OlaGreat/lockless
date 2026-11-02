@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideVote, planRewardSteps } from "../src/decisions";
+import { btcSwapMinimum, decideVote, planConversions, planDistributions } from "../src/decisions";
 import { EPOCH_SECONDS } from "../src/epoch";
 
 const EPOCH = 2_900 * EPOCH_SECONDS;
@@ -31,34 +31,54 @@ describe("decideVote", () => {
   });
 });
 
-describe("planRewardSteps", () => {
+describe("planConversions", () => {
   const none = { mezo: 0n, btc: 0n, musd: 0n, stMEZO: 0n };
 
-  it("does nothing when the harvester holds nothing", () => {
-    expect(planRewardSteps(none)).toEqual([]);
+  it("does nothing when the harvester holds nothing to convert", () => {
+    expect(planConversions({ ...none, musd: 5n, stMEZO: 5n })).toEqual([]);
   });
 
-  it("locks MEZO and then distributes the stMEZO it becomes", () => {
-    expect(planRewardSteps({ ...none, mezo: 5n })).toEqual(["lockMezo", "distributeStMEZO"]);
+  it("locks MEZO into stMEZO", () => {
+    expect(planConversions({ ...none, mezo: 5n })).toEqual(["lockMezo"]);
   });
 
-  it("swaps BTC and then distributes the MUSD it becomes", () => {
-    expect(planRewardSteps({ ...none, btc: 5n })).toEqual(["swapBtcToMusd", "distributeMusd"]);
+  it("swaps BTC into MUSD", () => {
+    expect(planConversions({ ...none, btc: 5n })).toEqual(["swapBtcToMusd"]);
   });
 
-  it("distributes MUSD and stMEZO already held", () => {
-    expect(planRewardSteps({ ...none, musd: 1n, stMEZO: 1n })).toEqual([
+  it("locks MEZO before swapping BTC", () => {
+    expect(planConversions({ ...none, mezo: 1n, btc: 1n })).toEqual(["lockMezo", "swapBtcToMusd"]);
+  });
+});
+
+describe("planDistributions", () => {
+  const none = { mezo: 0n, btc: 0n, musd: 0n, stMEZO: 0n };
+
+  it("does nothing when there is no MUSD or stMEZO", () => {
+    expect(planDistributions({ ...none, mezo: 5n, btc: 5n })).toEqual([]);
+  });
+
+  it("streams MUSD and stMEZO the harvester holds", () => {
+    expect(planDistributions({ ...none, musd: 1n, stMEZO: 1n })).toEqual([
       "distributeMusd",
       "distributeStMEZO",
     ]);
   });
+});
 
-  it("runs conversions before distributions", () => {
-    expect(planRewardSteps({ mezo: 1n, btc: 1n, musd: 1n, stMEZO: 1n })).toEqual([
-      "lockMezo",
-      "swapBtcToMusd",
-      "distributeMusd",
-      "distributeStMEZO",
-    ]);
+describe("btcSwapMinimum", () => {
+  it("accepts 1% less than the router quotes", () => {
+    expect(btcSwapMinimum(10_000n, 9_000n)).toEqual({ swap: true, minOut: 9_900n });
+  });
+
+  it("never asks for less than the oracle floor", () => {
+    expect(btcSwapMinimum(10_000n, 9_950n)).toEqual({ swap: true, minOut: 9_950n });
+  });
+
+  it("skips the swap when the pool quotes below the oracle floor", () => {
+    expect(btcSwapMinimum(9_000n, 9_700n)).toEqual({
+      swap: false,
+      reason: "the pool quotes more than 3% below Mezo's BTC price",
+    });
   });
 });

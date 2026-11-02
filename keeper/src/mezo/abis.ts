@@ -35,7 +35,8 @@ export const vaultAbi = parseAbi([
 export const harvesterAbi = parseAbi([
   "struct Route { address from; address to; bool stable; address factory; }",
   "function lockMezo() returns (uint256)",
-  "function swapToMusd(address tokenIn, uint256 amountIn, uint256 minMusdOut, Route[] routes) returns (uint256)",
+  "function swapBtcToMusd(uint256 amountIn, uint256 minMusdOut, Route[] routes) returns (uint256)",
+  "function oracleFloor(uint256 btcAmount) view returns (uint256)",
   "function distribute(address token)",
 ]);
 
