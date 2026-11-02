@@ -80,14 +80,40 @@ contract StMEZOStakingRewardsTest is StakingTestBase {
         assertApproxEqAbs(staking.earned(bob, address(musd)), 175 ether, ROUNDING);
     }
 
-    function test_NothingAccruesWhileNobodyStakes() public {
+    function test_RewardsWaitForTheFirstStaker() public {
         _notify(musd, REWARD);
         vm.warp(block.timestamp + DURATION / 2);
 
         _stakeAs(alice, 100 ether);
+        vm.warp(block.timestamp + DURATION);
+
+        assertApproxEqAbs(staking.earned(alice, address(musd)), REWARD, ROUNDING);
+    }
+
+    function test_StreamPausesWhileEveryoneHasLeft() public {
+        _stakeAs(alice, 100 ether);
+        _notify(musd, REWARD);
+        vm.warp(block.timestamp + DURATION / 4);
+        vm.prank(alice);
+        staking.withdraw(100 ether);
         vm.warp(block.timestamp + DURATION / 2);
 
-        assertApproxEqAbs(staking.earned(alice, address(musd)), REWARD / 2, ROUNDING);
+        _stakeAs(bob, 100 ether);
+        vm.warp(block.timestamp + DURATION);
+
+        assertApproxEqAbs(staking.earned(alice, address(musd)), REWARD / 4, ROUNDING);
+        assertApproxEqAbs(staking.earned(bob, address(musd)), (REWARD * 3) / 4, ROUNDING);
+    }
+
+    function test_NotifyWhileNobodyStakesKeepsTheEarlierReward() public {
+        _notify(musd, REWARD);
+        vm.warp(block.timestamp + DURATION * 2);
+        _notify(musd, REWARD);
+
+        _stakeAs(alice, 100 ether);
+        vm.warp(block.timestamp + DURATION);
+
+        assertApproxEqAbs(staking.earned(alice, address(musd)), REWARD * 2, ROUNDING);
     }
 
     function test_ClaimPaysEarnedRewards() public {
@@ -128,6 +154,7 @@ contract StMEZOStakingRewardsTest is StakingTestBase {
     }
 
     function test_NotifyDuringAPeriodRollsOverTheLeftover() public {
+        _stakeAs(alice, 100 ether);
         _notify(musd, REWARD);
         vm.warp(block.timestamp + DURATION / 2);
 

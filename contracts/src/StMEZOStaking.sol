@@ -162,11 +162,19 @@ contract StMEZOStaking is Ownable2Step, ReentrancyGuard {
 
     function _updateReward(address token, address account) private {
         RewardData storage data = rewardData[token];
+        if (totalStaked == 0) _pauseStream(data);
         data.rewardPerTokenStored = rewardPerToken(token);
         data.lastUpdate = lastTimeRewardApplicable(token);
         if (account == address(0)) return;
         unclaimedRewards[account][token] = earned(account, token);
         userRewardPerTokenPaid[account][token] = data.rewardPerTokenStored;
+    }
+
+    /// @dev With nobody staked, the time since the last update pays no one. Moving the stream's
+    ///      end back by that time streams those rewards later instead of losing them.
+    function _pauseStream(RewardData storage data) private {
+        if (data.lastUpdate >= data.periodFinish) return;
+        data.periodFinish = block.timestamp + (data.periodFinish - data.lastUpdate);
     }
 
     function _startRewardPeriod(address token, uint256 amount) private {
