@@ -9,6 +9,7 @@ import {MockVotingEscrow} from "./mocks/MockVotingEscrow.sol";
 import {MockBoostVoter} from "./mocks/MockBoostVoter.sol";
 import {MockRewardsDistributor} from "./mocks/MockRewardsDistributor.sol";
 import {MockRouter} from "./mocks/MockRouter.sol";
+import {MockPriceFeed} from "./mocks/MockPriceFeed.sol";
 
 contract DeployLocklessTest is Test {
     address internal owner = makeAddr("owner");
@@ -29,6 +30,8 @@ contract DeployLocklessTest is Test {
             rebaseDistributor: new MockRewardsDistributor(ve),
             router: IRouter(address(new MockRouter(1))),
             musd: new MockERC20("Mezo USD", "MUSD"),
+            btc: new MockERC20("Bitcoin", "BTC"),
+            btcPriceFeed: new MockPriceFeed(100_000 ether),
             owner: address(script),
             keeper: keeper,
             treasury: treasury,
@@ -60,6 +63,8 @@ contract DeployLocklessTest is Test {
         assertEq(deployment.harvester.treasury(), treasury);
         assertEq(deployment.harvester.keeper(), keeper);
         assertEq(deployment.harvester.feeBps(), 1_000);
+        assertEq(address(deployment.harvester.btc()), address(config.btc));
+        assertEq(address(deployment.harvester.btcPriceFeed()), address(config.btcPriceFeed));
     }
 
     function test_LetsTheHarvesterLockMezoIntoTheVault() public view {
@@ -80,6 +85,8 @@ contract DeployLocklessTest is Test {
         assertEq(address(testnet.rebaseDistributor), 0x2962E8817ae716019F759d098e2caE658bDcAd04);
         assertEq(address(testnet.router), 0x9a1ff7FE3a0F69959A3fBa1F1e5ee18e1A9CD7E9);
         assertEq(address(testnet.musd), 0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503);
+        assertEq(address(testnet.btc), 0x7b7C000000000000000000000000000000000000);
+        assertEq(address(testnet.btcPriceFeed), 0x86bCF0841622a5dAC14A313a15f96A95421b9366);
         assertEq(testnet.owner, owner);
         assertEq(testnet.keeper, keeper);
         assertEq(testnet.treasury, treasury);

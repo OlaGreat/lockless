@@ -6,6 +6,7 @@ import {StMEZOStaking} from "../src/StMEZOStaking.sol";
 import {MockBribe} from "./mocks/MockBribe.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockRouter} from "./mocks/MockRouter.sol";
+import {MockPriceFeed} from "./mocks/MockPriceFeed.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
 /// @notice Runs one full epoch through every Lockless contract together.
@@ -26,9 +27,10 @@ contract LocklessFlowTest is VaultTestBase {
         musd = new MockERC20("Mezo USD", "MUSD");
         bribe = new MockBribe(ve, address(voter));
         staking = new StMEZOStaking(stMEZO, owner);
-        harvester = new RewardHarvester(
-            new MockRouter(1), musd, staking, vault, treasury, owner, keeper, FEE_BPS
+        RewardHarvester.Markets memory markets = RewardHarvester.Markets(
+            new MockRouter(1), musd, new MockERC20("Bitcoin", "BTC"), new MockPriceFeed(1 ether)
         );
+        harvester = new RewardHarvester(markets, staking, vault, treasury, owner, keeper, FEE_BPS);
 
         vm.startPrank(owner);
         vault.setRewardsReceiver(address(harvester));

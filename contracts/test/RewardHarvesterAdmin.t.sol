@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {RewardHarvester} from "../src/RewardHarvester.sol";
 import {StMEZOStaking} from "../src/StMEZOStaking.sol";
 import {IRouter} from "../src/interfaces/IRouter.sol";
+import {IPriceFeed} from "../src/interfaces/IPriceFeed.sol";
 import {ILocklessVault} from "../src/interfaces/ILocklessVault.sol";
 import {HarvesterTestBase} from "./utils/HarvesterTestBase.sol";
 
@@ -22,44 +23,68 @@ contract RewardHarvesterAdminTest is HarvesterTestBase {
         assertEq(harvester.feeBps(), FEE_BPS);
     }
 
+    function test_PricesBtcWithItsOracle() public view {
+        assertEq(address(harvester.btc()), address(btc));
+        assertEq(address(harvester.btcPriceFeed()), address(priceFeed));
+    }
+
     function test_TakesMezoFromTheVault() public view {
         assertEq(address(harvester.vault()), address(vault));
         assertEq(address(harvester.mezo()), address(mezo));
     }
 
     function test_RevertWhen_VaultIsZero() public {
+        RewardHarvester.Markets memory markets = _markets();
+
         vm.expectRevert(RewardHarvester.ZeroAddress.selector);
         new RewardHarvester(
-            router, musd, staking, ILocklessVault(address(0)), treasury, owner, keeper, FEE_BPS
+            markets, staking, ILocklessVault(address(0)), treasury, owner, keeper, FEE_BPS
         );
     }
 
     function test_RevertWhen_RouterIsZero() public {
-        vm.expectRevert(RewardHarvester.ZeroAddress.selector);
-        new RewardHarvester(
-            IRouter(address(0)), musd, staking, vault, treasury, owner, keeper, FEE_BPS
-        );
+        RewardHarvester.Markets memory markets = _markets();
+        markets.router = IRouter(address(0));
+
+        _expectZeroAddressRevert(markets);
     }
 
     function test_RevertWhen_MusdIsZero() public {
-        vm.expectRevert(RewardHarvester.ZeroAddress.selector);
-        new RewardHarvester(
-            router, IERC20(address(0)), staking, vault, treasury, owner, keeper, FEE_BPS
-        );
+        RewardHarvester.Markets memory markets = _markets();
+        markets.musd = IERC20(address(0));
+
+        _expectZeroAddressRevert(markets);
+    }
+
+    function test_RevertWhen_BtcIsZero() public {
+        RewardHarvester.Markets memory markets = _markets();
+        markets.btc = IERC20(address(0));
+
+        _expectZeroAddressRevert(markets);
+    }
+
+    function test_RevertWhen_BtcPriceFeedIsZero() public {
+        RewardHarvester.Markets memory markets = _markets();
+        markets.btcPriceFeed = IPriceFeed(address(0));
+
+        _expectZeroAddressRevert(markets);
     }
 
     function test_RevertWhen_StakingIsZero() public {
+        RewardHarvester.Markets memory markets = _markets();
+
         vm.expectRevert(RewardHarvester.ZeroAddress.selector);
         new RewardHarvester(
-            router, musd, StMEZOStaking(address(0)), vault, treasury, owner, keeper, FEE_BPS
+            markets, StMEZOStaking(address(0)), vault, treasury, owner, keeper, FEE_BPS
         );
     }
 
     function test_RevertWhen_FeeIsAboveTheCap() public {
         uint256 tooHigh = harvester.MAX_FEE_BPS() + 1;
+        RewardHarvester.Markets memory markets = _markets();
 
         vm.expectRevert(RewardHarvester.FeeTooHigh.selector);
-        new RewardHarvester(router, musd, staking, vault, treasury, owner, keeper, tooHigh);
+        new RewardHarvester(markets, staking, vault, treasury, owner, keeper, tooHigh);
     }
 
     function test_OwnerCanChangeTheFee() public {
@@ -115,5 +140,10 @@ contract RewardHarvesterAdminTest is HarvesterTestBase {
         vm.expectRevert(unauthorized);
         harvester.setKeeper(newAccount);
         vm.stopPrank();
+    }
+
+    function _expectZeroAddressRevert(RewardHarvester.Markets memory markets) internal {
+        vm.expectRevert(RewardHarvester.ZeroAddress.selector);
+        new RewardHarvester(markets, staking, vault, treasury, owner, keeper, FEE_BPS);
     }
 }

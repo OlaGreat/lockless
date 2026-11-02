@@ -8,6 +8,7 @@ import {IRouter} from "../../src/interfaces/IRouter.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockRouter} from "../mocks/MockRouter.sol";
 import {MockLocklessVault} from "../mocks/MockLocklessVault.sol";
+import {MockPriceFeed} from "../mocks/MockPriceFeed.sol";
 
 abstract contract HarvesterTestBase is Test {
     uint256 internal constant FEE_BPS = 1_000;
@@ -19,6 +20,7 @@ abstract contract HarvesterTestBase is Test {
     MockERC20 internal mezo;
     MockLocklessVault internal vault;
     MockRouter internal router;
+    MockPriceFeed internal priceFeed;
     StMEZOStaking internal staking;
     RewardHarvester internal harvester;
 
@@ -38,14 +40,20 @@ abstract contract HarvesterTestBase is Test {
         router = new MockRouter(BTC_PRICE_IN_MUSD);
         musd.mint(address(router), 1_000_000_000 ether);
 
+        priceFeed = new MockPriceFeed(BTC_PRICE_IN_MUSD * 1 ether);
+
         staking = new StMEZOStaking(stToken, owner);
         harvester =
-            new RewardHarvester(router, musd, staking, vault, treasury, owner, keeper, FEE_BPS);
+            new RewardHarvester(_markets(), staking, vault, treasury, owner, keeper, FEE_BPS);
 
         vm.startPrank(owner);
         staking.addRewardToken(address(musd), address(harvester), 7 days);
         staking.addRewardToken(address(stToken), address(harvester), 7 days);
         vm.stopPrank();
+    }
+
+    function _markets() internal view returns (RewardHarvester.Markets memory) {
+        return RewardHarvester.Markets(router, musd, btc, priceFeed);
     }
 
     function _btcToMusdRoute() internal view returns (IRouter.Route[] memory routes) {

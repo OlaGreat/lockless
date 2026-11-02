@@ -10,6 +10,7 @@ import {StMEZOStaking} from "../src/StMEZOStaking.sol";
 import {IBoostVoter} from "../src/interfaces/IBoostVoter.sol";
 import {IRewardsDistributor} from "../src/interfaces/IRewardsDistributor.sol";
 import {IRouter} from "../src/interfaces/IRouter.sol";
+import {IPriceFeed} from "../src/interfaces/IPriceFeed.sol";
 import {IVotingEscrow} from "../src/interfaces/IVotingEscrow.sol";
 
 /// @notice Deploys and wires the Lockless contracts.
@@ -25,6 +26,9 @@ contract DeployLockless is Script {
         0x2962E8817ae716019F759d098e2caE658bDcAd04;
     address private constant TESTNET_ROUTER = 0x9a1ff7FE3a0F69959A3fBa1F1e5ee18e1A9CD7E9;
     address private constant TESTNET_MUSD = 0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503;
+    address private constant TESTNET_BTC = 0x7b7C000000000000000000000000000000000000;
+    /// @dev Mezo's MUSD price feed: BTC's USD price, 18 decimals, reverts when stale.
+    address private constant TESTNET_BTC_PRICE_FEED = 0x86bCF0841622a5dAC14A313a15f96A95421b9366;
 
     struct Config {
         IVotingEscrow veMEZO;
@@ -32,6 +36,8 @@ contract DeployLockless is Script {
         IRewardsDistributor rebaseDistributor;
         IRouter router;
         IERC20 musd;
+        IERC20 btc;
+        IPriceFeed btcPriceFeed;
         address owner;
         address keeper;
         address treasury;
@@ -81,6 +87,8 @@ contract DeployLockless is Script {
             rebaseDistributor: IRewardsDistributor(TESTNET_REBASE_DISTRIBUTOR),
             router: IRouter(TESTNET_ROUTER),
             musd: IERC20(TESTNET_MUSD),
+            btc: IERC20(TESTNET_BTC),
+            btcPriceFeed: IPriceFeed(TESTNET_BTC_PRICE_FEED),
             owner: owner,
             keeper: keeper,
             treasury: treasury,
@@ -100,8 +108,7 @@ contract DeployLockless is Script {
         returns (RewardHarvester)
     {
         return new RewardHarvester(
-            config.router,
-            config.musd,
+            RewardHarvester.Markets(config.router, config.musd, config.btc, config.btcPriceFeed),
             deployment.staking,
             deployment.vault,
             config.treasury,
@@ -128,6 +135,8 @@ contract DeployLockless is Script {
         vm.serializeAddress(key, "rebaseDistributor", address(config.rebaseDistributor));
         vm.serializeAddress(key, "router", address(config.router));
         vm.serializeAddress(key, "musd", address(config.musd));
+        vm.serializeAddress(key, "btc", address(config.btc));
+        vm.serializeAddress(key, "btcPriceFeed", address(config.btcPriceFeed));
         vm.serializeAddress(key, "mezo", config.veMEZO.token());
         vm.serializeAddress(key, "vault", address(deployment.vault));
         vm.serializeAddress(key, "stMEZO", address(deployment.stMEZO));
