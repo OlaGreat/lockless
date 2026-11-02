@@ -104,7 +104,8 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
 
         veMEZO.transferFrom(msg.sender, address(this), tokenId);
         _payLockIncentives(tokenId, receiver);
-        uint256 amount = _absorbLock(tokenId);
+        uint256 paidOutRebase = _claimLockRebase(tokenId);
+        uint256 amount = _absorbLock(tokenId) + _lockLooseMezo(paidOutRebase);
         stMEZO.mint(receiver, amount);
 
         emit LockDeposited(msg.sender, receiver, tokenId, amount);
@@ -305,6 +306,22 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
         uint256 gain = balance - balanceBefore;
         token.safeTransfer(receiver, gain);
         emit LockIncentivePaid(tokenId, address(token), receiver, gain);
+    }
+
+    /// @dev Must run before the merge burns the lock. Mezo adds the rebase to a live lock, but
+    ///      pays an expired lock's rebase out as MEZO to its owner, the vault at this point.
+    ///      Returns the MEZO paid out that way.
+    function _claimLockRebase(uint256 tokenId) private returns (uint256 paidOut) {
+        if (rebaseDistributor.claimable(tokenId) == 0) return 0;
+        uint256 balanceBefore = mezo.balanceOf(address(this));
+        rebaseDistributor.claim(tokenId);
+        return mezo.balanceOf(address(this)) - balanceBefore;
+    }
+
+    function _lockLooseMezo(uint256 amount) private returns (uint256) {
+        if (amount == 0) return 0;
+        _lockIntoMaster(amount);
+        return amount;
     }
 
     function _absorbLock(uint256 tokenId) private returns (uint256 amount) {
