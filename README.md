@@ -69,7 +69,7 @@ The deploy script writes these to [`contracts/deployments/31611.json`](contracts
 Live on testnet:
 
 - Master lock: veMEZO #939, permanent, owned by the vault.
-- stMEZO/MEZO pool on Mezo Pools: [`0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2`](https://explorer.test.mezo.org/address/0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2).
+- stMEZO/MEZO pool on Mezo Pools with 59 stMEZO and 59 MEZO: [`0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2`](https://explorer.test.mezo.org/address/0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2). Selling 1 stMEZO returns 0.98 MEZO and selling 10 returns 8.55 MEZO.
 - Keeper vote for the epoch starting 2026-10-29, split 92.7/7.3 across two gauges: [transaction](https://explorer.test.mezo.org/tx/0x6aa0f148f5fc553876c449e3d5018f86a3a99c88cd0f10dae86cda66ec25f7b0). No testnet gauge paid incentives that week, so we added small demo incentives ourselves (0.0005 BTC and 3 MEZO) to run the full yield flow.
 - First live swap through the harvester: 0.0002 BTC of test funds swapped for 15.72 MUSD, above the oracle floor of 15.00 ([transaction](https://explorer.test.mezo.org/tx/0x2cee2a15cc4acfe5fe4f5bca093d708c976190268ff3bafedb641f2b90f29aca)). The 10% fee went to the treasury and 14.14 MUSD is streaming to stakers over seven days ([transaction](https://explorer.test.mezo.org/tx/0xf7a9b07e1101591248d6ea7f18e6b9d59004270fd01595d55ee15f4818d8acc7)).
 
@@ -80,7 +80,7 @@ The Wave 1 contracts ([`0xD274D85f935A097252D9B624A45f9Dd1E6B9c671`](https://exp
 ```
 contracts/   Foundry: contracts, unit tests, fork tests, deploy script
 keeper/      TypeScript keeper: vote optimizer, harvest runner, CLI
-app/         React + wagmi web app: deposit, convert a lock, stake
+app/         React + wagmi web app: deposit, convert a lock, stake, sell stMEZO
 ```
 
 ## Run the tests
@@ -133,7 +133,7 @@ Connect a browser wallet on Mezo testnet. Get test BTC and MEZO from the [faucet
 
 ## Known limits
 
-- **stMEZO cannot be redeemed for MEZO.** The master lock is permanent, so holders leave by selling stMEZO, for example in a stMEZO/MEZO pool. Every liquid locker works this way. Yield and pool depth support the price.
+- **stMEZO cannot be redeemed for MEZO.** The master lock is permanent, so holders leave by selling stMEZO in the stMEZO/MEZO pool, which the app's Sell stMEZO tab does in one step. Every liquid locker works this way. The price depends on pool depth, and yield supports it.
 - **Permanent locks need one extra step.** veMEZO forbids unlocking a permanent lock in the block it changes owner, so its owner turns off the permanent flag before converting. The app guides this.
 - **A lock that voted this epoch waits until Thursday.** Its votes can only be reset in a new epoch, and not in that epoch's first hour.
 - **Incentives on gauges a lock no longer votes for are not found automatically.** Converting pays out what the lock earned on the gauges it votes for now. Claim older ones on Mezo first.
