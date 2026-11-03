@@ -83,6 +83,30 @@ contract LocklessVaultConvertIncentivesTest is VaultTestBase {
         _convertTo(bob);
     }
 
+    function test_PaysATokenEarnedOnSeveralGaugesInOneTransfer() public {
+        bribeA.addEarned(address(musd), tokenId, 40 ether);
+        bribeB.addEarned(address(musd), tokenId, 2 ether);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit LockIncentivePaid(tokenId, address(musd), bob, 42 ether);
+        _convertTo(bob);
+    }
+
+    function test_SkipsAGaugeWithoutAnIncentiveContract() public {
+        uint256 lockOnUnknownGauge = _createApprovedLock(alice, USER_LOCK);
+        address[] memory gauges = new address[](2);
+        gauges[0] = gaugeA;
+        gauges[1] = makeAddr("gaugeWithoutIncentives");
+        _voteFor(alice, lockOnUnknownGauge, gauges);
+        vm.warp(block.timestamp + 1 weeks);
+        bribeA.addEarned(address(musd), lockOnUnknownGauge, 40 ether);
+
+        vm.prank(alice);
+        vault.depositLock(lockOnUnknownGauge, bob);
+
+        assertEq(musd.balanceOf(bob), 40 ether);
+    }
+
     function test_ConvertsALockWithNothingToClaim() public {
         _convertTo(bob);
 

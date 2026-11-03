@@ -237,32 +237,50 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
 
     /// @dev Must run while the vault owns the lock and before its votes are reset: Mezo pays
     ///      incentives to the lock's current owner, and a reset forgets which gauges it voted for.
+    ///      One claim covers every gauge, and each distinct token is measured and sent once.
     function _payLockIncentives(uint256 tokenId, address receiver) private {
-        for (uint256 i = 0;; i++) {
-            (bool found, address gauge) = _votedGaugeAt(tokenId, i);
-            if (!found) return;
-            _payBribe(voter.gaugeToBribe(gauge), tokenId, receiver);
+        address[] memory bribes = _votedBribes(tokenId);
+        if (bribes.length == 0) return;
+        address[][] memory tokenGroups = _rewardTokensOfEach(bribes);
+        address[] memory tokens = _distinct(tokenGroups);
+        uint256[] memory balancesBefore = _balancesOf(tokens);
+        voter.claimBribes(bribes, tokenGroups, tokenId);
+        _sendGains(tokenId, tokens, balancesBefore, receiver);
+    }
+
+    /// @dev The incentive contracts of the gauges a lock votes for, skipping any gauge without one.
+    function _votedBribes(uint256 tokenId) private view returns (address[] memory bribes) {
+        address[] memory candidates = new address[](_votedGaugeCount(tokenId));
+        for (uint256 i = 0; i < candidates.length; i++) {
+            candidates[i] = voter.gaugeToBribe(voter.gaugeVote(tokenId, i));
+        }
+        return _withoutZeroAddresses(candidates);
+    }
+
+    /// @dev The voter exposes no length for a lock's gauge list, so this counts until a read fails.
+    function _votedGaugeCount(uint256 tokenId) private view returns (uint256 count) {
+        while (_hasVotedGaugeAt(tokenId, count)) {
+            count++;
         }
     }
 
-    function _votedGaugeAt(uint256 tokenId, uint256 index)
+    function _hasVotedGaugeAt(uint256 tokenId, uint256 index) private view returns (bool) {
+        try voter.gaugeVote(tokenId, index) returns (address) {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function _rewardTokensOfEach(address[] memory bribes)
         private
         view
-        returns (bool found, address gauge)
+        returns (address[][] memory tokenGroups)
     {
-        try voter.gaugeVote(tokenId, index) returns (address votedGauge) {
-            return (true, votedGauge);
-        } catch {
-            return (false, address(0));
+        tokenGroups = new address[][](bribes.length);
+        for (uint256 i = 0; i < bribes.length; i++) {
+            tokenGroups[i] = _rewardTokensOf(IReward(bribes[i]));
         }
-    }
-
-    function _payBribe(address bribe, uint256 tokenId, address receiver) private {
-        if (bribe == address(0)) return;
-        address[] memory tokens = _rewardTokensOf(IReward(bribe));
-        uint256[] memory balancesBefore = _balancesOf(tokens);
-        _claimBribe(bribe, tokens, tokenId);
-        _sendGains(tokenId, tokens, balancesBefore, receiver);
     }
 
     function _rewardTokensOf(IReward bribe) private view returns (address[] memory tokens) {
@@ -279,12 +297,57 @@ contract LocklessVault is ILocklessVault, Ownable2Step, ReentrancyGuard {
         }
     }
 
-    function _claimBribe(address bribe, address[] memory tokens, uint256 tokenId) private {
-        address[] memory bribes = new address[](1);
-        bribes[0] = bribe;
-        address[][] memory tokenGroups = new address[][](1);
-        tokenGroups[0] = tokens;
-        voter.claimBribes(bribes, tokenGroups, tokenId);
+    /// @dev Flattens token lists into one list with each token once, in first-seen order.
+    function _distinct(address[][] memory groups) private pure returns (address[] memory tokens) {
+        address[] memory seen = new address[](_totalLength(groups));
+        uint256 count = 0;
+        for (uint256 i = 0; i < groups.length; i++) {
+            for (uint256 j = 0; j < groups[i].length; j++) {
+                if (!_contains(seen, count, groups[i][j])) seen[count++] = groups[i][j];
+            }
+        }
+        tokens = _firstItems(seen, count);
+    }
+
+    function _totalLength(address[][] memory groups) private pure returns (uint256 total) {
+        for (uint256 i = 0; i < groups.length; i++) {
+            total += groups[i].length;
+        }
+    }
+
+    function _contains(address[] memory list, uint256 length, address item)
+        private
+        pure
+        returns (bool)
+    {
+        for (uint256 i = 0; i < length; i++) {
+            if (list[i] == item) return true;
+        }
+        return false;
+    }
+
+    function _withoutZeroAddresses(address[] memory list)
+        private
+        pure
+        returns (address[] memory kept)
+    {
+        address[] memory buffer = new address[](list.length);
+        uint256 count = 0;
+        for (uint256 i = 0; i < list.length; i++) {
+            if (list[i] != address(0)) buffer[count++] = list[i];
+        }
+        kept = _firstItems(buffer, count);
+    }
+
+    function _firstItems(address[] memory list, uint256 count)
+        private
+        pure
+        returns (address[] memory items)
+    {
+        items = new address[](count);
+        for (uint256 i = 0; i < count; i++) {
+            items[i] = list[i];
+        }
     }
 
     function _sendGains(
