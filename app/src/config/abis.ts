@@ -37,3 +37,44 @@ export const boostVoterAbi = parseAbi([
   "function lastVoted(uint256 tokenId) view returns (uint256)",
   "function reset(uint256 tokenId)",
 ]);
+
+const routeComponents = [
+  { name: "from", type: "address" },
+  { name: "to", type: "address" },
+  { name: "stable", type: "bool" },
+  { name: "factory", type: "address" },
+] as const;
+
+/** The parts of the Mezo Pools router the app uses, written out so viem can type the routes. */
+export const routerAbi = [
+  {
+    type: "function",
+    name: "defaultFactory",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "getAmountsOut",
+    stateMutability: "view",
+    inputs: [
+      { name: "amountIn", type: "uint256" },
+      { name: "routes", type: "tuple[]", components: routeComponents },
+    ],
+    outputs: [{ name: "amounts", type: "uint256[]" }],
+  },
+  {
+    type: "function",
+    name: "swapExactTokensForTokens",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "amountIn", type: "uint256" },
+      { name: "amountOutMin", type: "uint256" },
+      { name: "routes", type: "tuple[]", components: routeComponents },
+      { name: "to", type: "address" },
+      { name: "deadline", type: "uint256" },
+    ],
+    outputs: [{ name: "amounts", type: "uint256[]" }],
+  },
+] as const;

@@ -6,6 +6,7 @@ export interface Deployment {
   stMEZO: Address;
   staking: Address;
   harvester: Address;
+  router: Address;
   veMEZO: Address;
   boostVoter: Address;
   musd: Address;

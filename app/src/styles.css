@@ -327,6 +327,30 @@ a {
   font-weight: 700;
 }
 
+.quote {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.quote div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quote dt {
+  font-size: 0.85rem;
+}
+
+.quote dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 .earned {
   display: grid;
   grid-template-columns: 1fr 1fr auto;

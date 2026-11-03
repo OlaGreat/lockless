@@ -4,12 +4,13 @@ import { Brand } from "./components/Brand";
 import { ConnectButton } from "./components/ConnectButton";
 import { ConvertPanel } from "./components/ConvertPanel";
 import { DepositPanel } from "./components/DepositPanel";
+import { SellPanel } from "./components/SellPanel";
 import { StakePanel } from "./components/StakePanel";
 import { StatsBar } from "./components/StatsBar";
 import { EXPLORER_URL, mezoTestnet } from "./config/chain";
 import { deployment, type Deployment } from "./config/deployment";
 
-const TABS = ["Deposit MEZO", "Convert a lock", "Stake"] as const;
+const TABS = ["Deposit MEZO", "Convert a lock", "Stake", "Sell stMEZO"] as const;
 type Tab = (typeof TABS)[number];
 
 export function App() {
@@ -57,7 +58,8 @@ function ActivePanel({ tab, deployment }: { tab: Tab; deployment: Deployment }) 
   if (chainId !== mezoTestnet.id) return <p className="panel muted">Switch your wallet to Mezo testnet.</p>;
   if (tab === "Deposit MEZO") return <DepositPanel deployment={deployment} account={address} />;
   if (tab === "Convert a lock") return <ConvertPanel deployment={deployment} account={address} />;
-  return <StakePanel deployment={deployment} account={address} />;
+  if (tab === "Stake") return <StakePanel deployment={deployment} account={address} />;
+  return <SellPanel deployment={deployment} account={address} />;
 }
 
 function Footer({ deployment }: { deployment: Deployment }) {
