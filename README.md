@@ -59,18 +59,21 @@ stMEZO supply always equals the MEZO in the master lock. Rebase growth is minted
 
 | Contract | Address |
 |---|---|
-| LocklessVault | [`0xD274D85f935A097252D9B624A45f9Dd1E6B9c671`](https://explorer.test.mezo.org/address/0xD274D85f935A097252D9B624A45f9Dd1E6B9c671) |
-| stMEZO | [`0x5a8287c780340a5Ccaf7f7a3c69175Bcf0921D1E`](https://explorer.test.mezo.org/address/0x5a8287c780340a5Ccaf7f7a3c69175Bcf0921D1E) |
-| StMEZOStaking | [`0x04f35c7a37e5A25c5698736f1cB1CD6E0EC7CD93`](https://explorer.test.mezo.org/address/0x04f35c7a37e5A25c5698736f1cB1CD6E0EC7CD93) |
-| RewardHarvester | [`0x91dd4d134DA056CD1B17b0D351f5B3cDCB77cd50`](https://explorer.test.mezo.org/address/0x91dd4d134DA056CD1B17b0D351f5B3cDCB77cd50) |
+| LocklessVault | [`0x00046011bAB463Fd9261839F81321d80e0d749ee`](https://explorer.test.mezo.org/address/0x00046011bAB463Fd9261839F81321d80e0d749ee) |
+| stMEZO | [`0xf55017bF43f22cAbcf85AF3619317b7DA5Bcc148`](https://explorer.test.mezo.org/address/0xf55017bF43f22cAbcf85AF3619317b7DA5Bcc148) |
+| StMEZOStaking | [`0x8d0b711447Fed0CBB952540915045A663fbD32ca`](https://explorer.test.mezo.org/address/0x8d0b711447Fed0CBB952540915045A663fbD32ca) |
+| RewardHarvester | [`0xeDccE8F0F9C7bE1AC59FE808c3BBdC9954F0c647`](https://explorer.test.mezo.org/address/0xeDccE8F0F9C7bE1AC59FE808c3BBdC9954F0c647) |
 
-The deploy script writes these to [`contracts/deployments/31611.json`](contracts/deployments/31611.json), which the keeper and the app read. All four are verified with an exact match on [Sourcify](https://repo.sourcify.dev/31611/0xD274D85f935A097252D9B624A45f9Dd1E6B9c671).
+The deploy script writes these to [`contracts/deployments/31611.json`](contracts/deployments/31611.json), which the keeper and the app read. All four are verified with an exact match on [Sourcify](https://repo.sourcify.dev/31611/0x00046011bAB463Fd9261839F81321d80e0d749ee).
 
 Live on testnet:
 
-- Master lock: veMEZO [#923](https://explorer.test.mezo.org/address/0xaCE816CA2bcc9b12C59799dcC5A959Fb9b98111b), permanent.
-- stMEZO/MEZO pool on Mezo Pools: [`0x1b19AC8AB63C094897a5f2285B039843634F5DBC`](https://explorer.test.mezo.org/address/0x1b19AC8AB63C094897a5f2285B039843634F5DBC).
-- First keeper vote, split 87/13 across the two gauges paying incentives that epoch: [transaction](https://explorer.test.mezo.org/tx/0x18727a1d64cc496842703bec2dd51a4517a6229767d12eb4ac46519d91e04e6c).
+- Master lock: veMEZO #939, permanent, owned by the vault.
+- stMEZO/MEZO pool on Mezo Pools: [`0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2`](https://explorer.test.mezo.org/address/0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2).
+- Keeper vote for the epoch starting 2026-10-29, split 92.7/7.3 across two gauges: [transaction](https://explorer.test.mezo.org/tx/0x6aa0f148f5fc553876c449e3d5018f86a3a99c88cd0f10dae86cda66ec25f7b0). No testnet gauge paid incentives that week, so we added small demo incentives ourselves (0.0005 BTC and 3 MEZO) to run the full yield flow.
+- First live swap through the harvester: 0.0002 BTC of test funds swapped for 15.72 MUSD, above the oracle floor of 15.00 ([transaction](https://explorer.test.mezo.org/tx/0x2cee2a15cc4acfe5fe4f5bca093d708c976190268ff3bafedb641f2b90f29aca)). The 10% fee went to the treasury and 14.14 MUSD is streaming to stakers over seven days ([transaction](https://explorer.test.mezo.org/tx/0xf7a9b07e1101591248d6ea7f18e6b9d59004270fd01595d55ee15f4818d8acc7)).
+
+The Wave 1 contracts ([`0xD274D85f935A097252D9B624A45f9Dd1E6B9c671`](https://explorer.test.mezo.org/address/0xD274D85f935A097252D9B624A45f9Dd1E6B9c671) and its stMEZO, staking and harvester) are retired. They had the issues in the [security review](docs/security-review.md) and cannot be upgraded, so the fixed contracts were deployed fresh. Their test MEZO stays in the old permanent lock.
 
 ## Repository
 

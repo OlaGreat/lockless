@@ -82,15 +82,18 @@ The README and the convert screen told users rewards stay with a converted lock.
 - **Invariant tests** on staking: under random stakes, withdrawals, claims, top-ups and time jumps, the contract never owes more than it holds, never pays out more than it received, and holds every staked token.
 - **Slither 0.11.6**: 37 results, all triaged. None needed a code change. They are external calls in loops (I-04), timestamp use for epochs, zero checks done through a helper Slither does not follow, strict equality on zero balances that only skip empty transfers, ignored return values where the code measures balances instead, and one cache-array-length gas note.
 
-## Not yet verified on the live chain
+## Checked on the live chain
 
-Mezo's MEZO and BTC tokens and its price oracle are precompiles that only run on Mezo itself, so these steps can only be confirmed after deploying:
+Mezo's MEZO and BTC tokens and its price oracle are precompiles that only run on Mezo itself, so these steps were confirmed on testnet after deploying the fixed contracts on 2026-11-03:
 
-- A BTC to MUSD swap through the harvester on the real Mezo Pools router.
-- The keeper's full harvest run against the new contracts.
-- A conversion of a lock that earned BTC incentives.
+- **Owner cannot redirect rewards (H-01).** Calling `setRewardsReceiver` as the owner reverts with `RewardsReceiverAlreadySet`.
+- **BTC swap with the oracle floor (M-02).** 0.0002 BTC swapped for 15.72 MUSD on the real Mezo Pools router, above the 15.00 floor: [swap](https://explorer.test.mezo.org/tx/0x2cee2a15cc4acfe5fe4f5bca093d708c976190268ff3bafedb641f2b90f29aca).
+- **Keeper harvest run.** Rebase claim, swap and MUSD stream to stakers, with the 10% fee to the treasury: [rebase claim](https://explorer.test.mezo.org/tx/0x6a24944b230a6ae461ff0ac0459e621ef7416efb7906bf12489089fbc33b0946), [stream](https://explorer.test.mezo.org/tx/0xf7a9b07e1101591248d6ea7f18e6b9d59004270fd01595d55ee15f4818d8acc7).
 
-Each is run on testnet right after deploying, and this section is updated with the transactions.
+Still to confirm, after the epoch ends on 2026-11-05:
+
+- **Converting a lock with BTC and MEZO incentives (M-01).** Test lock #940 votes this epoch for both gauges carrying demo incentives. Converting it next epoch should pay its share of both to the receiver.
+- **Harvesting the master lock's real incentives.** The master lock votes for the same gauges.
 
 ## Credits
 
