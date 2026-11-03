@@ -223,6 +223,39 @@ contract LocklessVaultForkTest is Test {
         assertLt(gasUsed, (BLOCK_GAS_LIMIT * 3) / 4);
     }
 
+    function test_KeeperHarvestsRealIncentivesToTheReceiver() public onlyWhenForking {
+        _depositAs(owner, 1_000 ether);
+        (address[] memory gauges, uint256[] memory weights) = _singleLiveGaugeVote();
+        vm.prank(keeper);
+        vault.vote(gauges, weights);
+        _addMezoIncentive(100 ether);
+        vm.warp(block.timestamp + EPOCH);
+        uint256 earned = _mezoEarnedOnFirstGauge(vault.masterTokenId());
+        (address[] memory bribes, address[][] memory tokens) = _mezoClaimOnFirstGauge();
+
+        vm.prank(keeper);
+        vault.harvest(bribes, tokens);
+
+        assertGt(earned, 0);
+        assertEq(MEZO.balanceOf(harvester), earned);
+        assertEq(MEZO.balanceOf(address(vault)), 0);
+    }
+
+    function test_ClaimsTheMasterLocksRealRebaseForStakers() public onlyWhenForking {
+        _depositAs(owner, 1_000 ether);
+        _mirrorDistributorMezoState();
+        _runNextWeeklyUpdate();
+        _runNextWeeklyUpdate();
+        uint256 pending = DISTRIBUTOR.claimable(vault.masterTokenId());
+
+        vault.claimRebase();
+
+        assertGt(pending, 0);
+        assertEq(vault.lockedAmount(), 1_000 ether + pending);
+        assertEq(stMEZO.balanceOf(harvester), pending);
+        assertEq(stMEZO.totalSupply(), vault.lockedAmount());
+    }
+
     function test_RejectsALockThatVotedThisEpoch() public onlyWhenForking {
         _depositAs(owner, 1 ether);
         uint256 tokenId = _createApprovedLock(alice, 500 ether);
@@ -291,6 +324,18 @@ contract LocklessVaultForkTest is Test {
         MEZO.approve(address(VOTER), amount);
         IBoostVoterTestHelpers(address(VOTER)).addBribes(_firstLiveGauge(), tokens, amounts);
         vm.stopPrank();
+    }
+
+    function _mezoClaimOnFirstGauge()
+        internal
+        view
+        returns (address[] memory bribes, address[][] memory tokens)
+    {
+        bribes = new address[](1);
+        bribes[0] = VOTER.gaugeToBribe(_firstLiveGauge());
+        tokens = new address[][](1);
+        tokens[0] = new address[](1);
+        tokens[0][0] = address(MEZO);
     }
 
     function _mezoEarnedOnFirstGauge(uint256 tokenId) internal view returns (uint256) {
