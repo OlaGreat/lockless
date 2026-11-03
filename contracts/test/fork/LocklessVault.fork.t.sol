@@ -8,7 +8,7 @@ import {StMEZO} from "../../src/StMEZO.sol";
 import {IVotingEscrow} from "../../src/interfaces/IVotingEscrow.sol";
 import {IBoostVoter} from "../../src/interfaces/IBoostVoter.sol";
 import {IRewardsDistributor} from "../../src/interfaces/IRewardsDistributor.sol";
-import {MockERC20} from "../mocks/MockERC20.sol";
+import {PrecompileTokenStandIn} from "../mocks/PrecompileTokenStandIn.sol";
 
 interface IVeMEZOTestHelpers {
     function approve(address spender, uint256 tokenId) external;
@@ -25,6 +25,15 @@ interface IRewardTestHelpers {
     function earned(address token, uint256 tokenId) external view returns (uint256);
 }
 
+interface IMinterTestHelpers {
+    function updatePeriod() external returns (uint256);
+    function activePeriod() external view returns (uint256);
+}
+
+interface IRewardsDistributorTestHelpers {
+    function tokenLastBalance() external view returns (uint256);
+}
+
 /// @notice Runs the vault against the real Mezo testnet contracts on a local fork.
 /// @dev Run with: RUN_FORK_TESTS=true forge test --match-path "test/fork/*"
 contract LocklessVaultForkTest is Test {
@@ -34,6 +43,17 @@ contract LocklessVaultForkTest is Test {
     IRewardsDistributor internal constant DISTRIBUTOR =
         IRewardsDistributor(0x2962E8817ae716019F759d098e2caE658bDcAd04);
     IERC20 internal constant MEZO = IERC20(0x7B7c000000000000000000000000000000000001);
+    IERC20 internal constant BTC = IERC20(0x7b7C000000000000000000000000000000000000);
+    IERC20 internal constant MUSD = IERC20(0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503);
+    IMinterTestHelpers internal constant MINTER =
+        IMinterTestHelpers(0xe1952b3E980E43d3910d42088029341f436C1B74);
+    /// @dev MEZO's total supply at DEFAULT_FORK_BLOCK, read from the live chain. Mezo sizes the
+    ///      weekly rebase from it.
+    uint256 internal constant RECORDED_MEZO_SUPPLY = 1_217_509_264_009_397_853_075_382_415;
+    /// @dev The voter's maxVotingNum and the Mezo testnet block gas limit, read on 2026-11-03. The
+    ///      worst-case conversion must leave a quarter of a block spare.
+    uint256 internal constant MAX_GAUGES_PER_VOTE = 30;
+    uint256 internal constant BLOCK_GAS_LIMIT = 10_000_000;
     uint256 internal constant EPOCH = 1 weeks;
     /// @dev A block every public RPC node has. One node lags the others by about a day.
     uint256 internal constant DEFAULT_FORK_BLOCK = 16_280_000;
@@ -58,7 +78,7 @@ contract LocklessVaultForkTest is Test {
     function setUp() public {
         if (!vm.envOr("RUN_FORK_TESTS", false)) return;
         _forkAtStableBlock();
-        _replaceMezoPrecompileWithErc20();
+        _replaceTokenPrecompilesWithErc20s();
         _warpToMiddleOfNextEpoch();
         vault = new LocklessVault(VE_MEZO, VOTER, DISTRIBUTOR, owner, keeper);
         stMEZO = vault.stMEZO();
@@ -165,6 +185,44 @@ contract LocklessVaultForkTest is Test {
         assertEq(_mezoEarnedOnFirstGauge(vault.masterTokenId()), masterEarned);
     }
 
+    function test_KeepsARealLocksPendingRebaseWhenConverting() public onlyWhenForking {
+        _depositAs(owner, 1 ether);
+        uint256 tokenId = _createApprovedLock(alice, 500 ether);
+        _mirrorDistributorMezoState();
+        _runNextWeeklyUpdate();
+        _runNextWeeklyUpdate();
+        uint256 pending = DISTRIBUTOR.claimable(tokenId);
+
+        vm.prank(alice);
+        vault.depositLock(tokenId, bob);
+
+        assertGt(pending, 0);
+        assertEq(stMEZO.balanceOf(bob), 500 ether + pending);
+        assertEq(stMEZO.totalSupply(), vault.lockedAmount());
+    }
+
+    function test_ConvertingALockThatVotedForThirtyGaugesFitsInABlock() public onlyWhenForking {
+        _depositAs(owner, 1 ether);
+        uint256 tokenId = _createApprovedLock(alice, 500 ether);
+        address[] memory gauges = _liveGauges(MAX_GAUGES_PER_VOTE);
+        _voteFor(alice, tokenId, gauges);
+        _addMezoAndMusdIncentives(gauges, 10 ether);
+        vm.warp(block.timestamp + EPOCH);
+        (uint256 mezoEarned, uint256 musdEarned) = _earnedOn(gauges, tokenId);
+
+        uint256 gasBefore = gasleft();
+        vm.prank(alice);
+        vault.depositLock(tokenId, bob);
+        uint256 gasUsed = gasBefore - gasleft();
+        emit log_named_uint("gas to convert a lock on 30 gauges", gasUsed);
+
+        assertGt(mezoEarned, 0);
+        assertGt(musdEarned, 0);
+        assertEq(MEZO.balanceOf(bob), mezoEarned);
+        assertEq(MUSD.balanceOf(bob), musdEarned);
+        assertLt(gasUsed, (BLOCK_GAS_LIMIT * 3) / 4);
+    }
+
     function test_RejectsALockThatVotedThisEpoch() public onlyWhenForking {
         _depositAs(owner, 1 ether);
         uint256 tokenId = _createApprovedLock(alice, 500 ether);
@@ -240,6 +298,78 @@ contract LocklessVaultForkTest is Test {
         return IRewardTestHelpers(bribe).earned(address(MEZO), tokenId);
     }
 
+    function _voteFor(address user, uint256 tokenId, address[] memory gauges) internal {
+        uint256[] memory weights = new uint256[](gauges.length);
+        for (uint256 i = 0; i < gauges.length; i++) {
+            weights[i] = 1;
+        }
+        vm.prank(user);
+        VOTER.vote(tokenId, gauges, weights);
+    }
+
+    function _addMezoAndMusdIncentives(address[] memory gauges, uint256 amountEach) internal {
+        address briber = makeAddr("briber");
+        uint256 total = amountEach * gauges.length;
+        _giveMezo(briber, total);
+        deal(address(MUSD), briber, total);
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(MEZO);
+        tokens[1] = address(MUSD);
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = amountEach;
+        amounts[1] = amountEach;
+        vm.startPrank(briber);
+        MEZO.approve(address(VOTER), total);
+        MUSD.approve(address(VOTER), total);
+        for (uint256 i = 0; i < gauges.length; i++) {
+            IBoostVoterTestHelpers(address(VOTER)).addBribes(gauges[i], tokens, amounts);
+        }
+        vm.stopPrank();
+    }
+
+    function _earnedOn(address[] memory gauges, uint256 tokenId)
+        internal
+        view
+        returns (uint256 mezoEarned, uint256 musdEarned)
+    {
+        for (uint256 i = 0; i < gauges.length; i++) {
+            IRewardTestHelpers bribe = IRewardTestHelpers(VOTER.gaugeToBribe(gauges[i]));
+            mezoEarned += bribe.earned(address(MEZO), tokenId);
+            musdEarned += bribe.earned(address(MUSD), tokenId);
+        }
+    }
+
+    function _liveGauges(uint256 count) internal view returns (address[] memory gauges) {
+        IBoostVoterTestHelpers helpers = IBoostVoterTestHelpers(address(VOTER));
+        gauges = new address[](count);
+        uint256 found = 0;
+        for (uint256 i = 0; found < count; i++) {
+            address gauge = helpers.gauges(i);
+            if (helpers.isAlive(gauge)) gauges[found++] = gauge;
+        }
+    }
+
+    /// @dev The MEZO precompile keeps balances and allowances outside EVM storage, so the stand-in
+    ///      ERC20 is given the distributor's recorded balance, its standing approval to veMEZO and
+    ///      the real total supply.
+    function _mirrorDistributorMezoState() internal {
+        address distributor = address(DISTRIBUTOR);
+        _giveMezo(distributor, IRewardsDistributorTestHelpers(distributor).tokenLastBalance());
+        vm.prank(distributor);
+        MEZO.approve(address(VE_MEZO), type(uint256).max);
+        _giveMezo(makeAddr("restOfSupply"), RECORDED_MEZO_SUPPLY - MEZO.totalSupply());
+    }
+
+    /// @dev Moves to the next epoch and runs Mezo's weekly update, which mints the rebase and
+    ///      makes it claimable for every week a lock was held in full.
+    function _runNextWeeklyUpdate() internal {
+        vm.warp(block.timestamp + EPOCH);
+        uint256 currentWeek = (block.timestamp / EPOCH) * EPOCH;
+        while (MINTER.activePeriod() < currentWeek) {
+            MINTER.updatePeriod();
+        }
+    }
+
     function _singleLiveGaugeVote()
         internal
         view
@@ -267,14 +397,17 @@ contract LocklessVaultForkTest is Test {
         vm.createSelectFork("mezo_testnet", forkBlock);
     }
 
-    /// @dev MEZO is a native precompile on Mezo. Its on-chain stub calls itself, which only works
-    ///      on the real chain, so the fork swaps in a plain ERC20 at the same address.
-    function _replaceMezoPrecompileWithErc20() internal {
-        vm.etch(address(MEZO), address(new MockERC20("Mezo", "MEZO")).code);
+    /// @dev MEZO and BTC are native precompiles on Mezo. Their on-chain stubs call themselves, which
+    ///      only works on the real chain, so the fork swaps in plain ERC20s at the same addresses.
+    ///      Incentive contracts list BTC, so the vault reads BTC balances while converting.
+    function _replaceTokenPrecompilesWithErc20s() internal {
+        bytes memory standIn = address(new PrecompileTokenStandIn()).code;
+        vm.etch(address(MEZO), standIn);
+        vm.etch(address(BTC), standIn);
     }
 
     function _giveMezo(address user, uint256 amount) internal {
-        MockERC20(address(MEZO)).mint(user, amount);
+        PrecompileTokenStandIn(address(MEZO)).mint(user, amount);
     }
 
     /// @dev Voting is closed in the first and last hour of an epoch, so tests start mid-epoch.
