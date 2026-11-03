@@ -19,6 +19,7 @@ Severity: **High** means funds can be taken. **Medium** means funds can be lost 
 | I-03 | Info | Converting pays out incentives only from the gauges the lock votes for now. Mezo keeps no on-chain list of older ones. | Internal review | Documented in the app and README |
 | I-04 | Info | Converting calls every incentive token on the lock's gauges, so one token that reverts on `balanceOf` or `transfer` blocks conversion of locks voting that gauge. | Slither (calls-loop) | Accepted: Mezo governance whitelists incentive tokens |
 | I-05 | Info | Mezo does not let unvested grant locks be merged, so they cannot be converted. | Internal review | By design (Mezo rule) |
+| I-06 | Info | Converting a lock that votes for Mezo's maximum of 30 gauges cost 7.4M gas of the 10M block gas limit, because each gauge was claimed separately. | Fork test | Reduced to 5.7M in [723e1f1]; a fork test keeps it under 7.5M |
 
 ## Trust assumptions
 
@@ -70,9 +71,26 @@ The README and the convert screen told users rewards stay with a converted lock.
 ## How the fixes were checked
 
 - **Unit tests** for every fix, written before the fix and failing first. The test doubles for veMEZO, the boost voter, the incentive contracts, the rebase distributor and the price feed follow the deployed Mezo source, including who gets paid and the error names.
-- **Fork tests** against the real Mezo testnet contracts: converting a lock with a real pending incentive, keeping the master lock's own incentives in place, and pricing swaps with the real price feed.
+- **Fork tests** against the real Mezo testnet contracts:
+  - converting a lock with a real pending incentive, and keeping the master lock's own incentives in place
+  - converting a lock with a real pending rebase, produced by running Mezo's own weekly update
+  - converting a lock that voted for 30 live gauges with two incentive tokens each, within a gas bound
+  - the keeper's harvest of real incentives and the master lock's real rebase claim
+  - pricing swaps with the real price feed
+  The fork stands in for the MEZO, BTC and oracle precompiles, which cannot run off-chain, with values recorded from the live chain. The new conversion tests fail on the code before the fix.
+- **Deployment** simulated against the live testnet: every transaction fits the block gas limit (the largest is 4.4M) and every contract is under the 24 KB size limit.
 - **Invariant tests** on staking: under random stakes, withdrawals, claims, top-ups and time jumps, the contract never owes more than it holds, never pays out more than it received, and holds every staked token.
 - **Slither 0.11.6**: 37 results, all triaged. None needed a code change. They are external calls in loops (I-04), timestamp use for epochs, zero checks done through a helper Slither does not follow, strict equality on zero balances that only skip empty transfers, ignored return values where the code measures balances instead, and one cache-array-length gas note.
+
+## Not yet verified on the live chain
+
+Mezo's MEZO and BTC tokens and its price oracle are precompiles that only run on Mezo itself, so these steps can only be confirmed after deploying:
+
+- A BTC to MUSD swap through the harvester on the real Mezo Pools router.
+- The keeper's full harvest run against the new contracts.
+- A conversion of a lock that earned BTC incentives.
+
+Each is run on testnet right after deploying, and this section is updated with the transactions.
 
 ## Credits
 
@@ -86,3 +104,4 @@ Thanks to KupiaSec for reporting M-01, M-03 and L-01, and to the Mezo Buildathon
 [11ad2eb]: https://github.com/OlaGreat/lockless/commit/11ad2eb
 [064b7a1]: https://github.com/OlaGreat/lockless/commit/064b7a1
 [fb7d112]: https://github.com/OlaGreat/lockless/commit/fb7d112
+[723e1f1]: https://github.com/OlaGreat/lockless/commit/723e1f1
