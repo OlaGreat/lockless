@@ -145,6 +145,17 @@ Connect a browser wallet on Mezo testnet. Get test BTC and MEZO from the [faucet
 
 Lockless has not been audited. The [security review](docs/security-review.md) lists every known finding, who reported it, how it was fixed and the trust assumptions that remain. Thanks to KupiaSec and the Wave 1 judges for their reports.
 
+## Team
+
+Lockless is built by a solo developer.
+
+**OlaGreat**, software engineer. [X](https://x.com/great_dipupo) and [GitHub](https://github.com/OlaGreat).
+DeFi and Web3 builder, writing smart contracts for lending and borrowing protocols and working on blockchain infrastructure.
+
+- **Ships quickly:** Lockless went from idea to a working testnet deployment, with contracts, keeper and app, during Wave 1.
+- **Acts on feedback:** every finding from the Wave 1 judges and from KupiaSec was fixed, tested against Mezo's real contracts and redeployed within a week. See the [security review](docs/security-review.md).
+- **Plans beyond the buildathon:** an external audit and a multisig owner behind a timelock before mainnet, and open to collaborators who want to help take Lockless there.
+
 ## Roadmap (Wave 2)
 
 - Real MUSD yield from live epochs.
