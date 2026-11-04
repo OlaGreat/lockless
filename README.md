@@ -46,6 +46,44 @@ With Lockless, a 1,000 MEZO lock becomes 1,000 stMEZO instead of 600 MEZO from t
 
 stMEZO supply always equals the MEZO in the master lock. Rebase growth is minted as stMEZO rewards, so the 1:1 backing holds.
 
+## Unit economics
+
+Read from Mezo mainnet on 2026-11-04, with MEZO at $0.0063 (CoinGecko). These are planning estimates, not promises.
+
+**Where veMEZO's yield comes from.** Two sources, both paid in MEZO:
+
+- **Rebase:** about 1.97M MEZO a week, shared by voting power. This is 96% of veMEZO's yield today.
+- **Boost incentives:** 80,000 MEZO a week, all on one gauge that holds 41.4M votes.
+
+**Why a permanent lock earns more.** Ordinary locks lose voting power as they near expiry, so the 282.2M MEZO locked carries only 98.3M voting power. Lockless's master lock is permanent, so each MEZO in it earns about 2.9 times the rebase of an average locked MEZO.
+
+**Per 1,000 MEZO in Lockless, each week:**
+
+| | MEZO |
+|---|---|
+| Rebase | 20.0 |
+| Incentives | 1.9 |
+| Total yield | 21.9 |
+| Lockless fee (10%) | 2.2 |
+| Paid to stakers | 19.7 |
+
+An average locked 1,000 MEZO earns about 7.0 MEZO of rebase a week.
+
+**Protocol revenue at different sizes.** The fee only, assuming new deposits dilute every other voter:
+
+| Share of all locked MEZO | MEZO in Lockless | Value | Fee per week | Fee per year |
+|---|---|---|---|---|
+| 1% | 2.8M | $18k | 6,000 MEZO ($38) | $2.0k |
+| 5% | 14.1M | $89k | 26,700 MEZO ($168) | $8.8k |
+| 10% | 28.2M | $178k | 47,100 MEZO ($297) | $15.4k |
+| 25% | 70.6M | $445k | 87,200 MEZO ($549) | $28.6k |
+
+**Costs.** The keeper sends about six transactions a week, which costs under $1 a week at Mezo's gas price. The main cost is one-off: an external audit before mainnet.
+
+**What this means.** At today's MEZO price all veMEZO is worth about $1.8M, so fee revenue starts small. Every figure moves with the MEZO price, because the rebase and the incentives are both paid in MEZO. The clearest value is for holders: a 1,000 MEZO lock becomes 1,000 stMEZO that keeps earning about 19.7 MEZO a week, instead of about 600 MEZO from the discount desk, and nobody has to vote each week. The BTC side on the roadmap would add BTC yield.
+
+Sources: veMEZO [`0xb90fdAd3DFD180458D62Cc6acedc983D78E20122`](https://explorer.mezo.org/address/0xb90fdAd3DFD180458D62Cc6acedc983D78E20122) (`supply`, `totalVotingPowerAt`), boost voter [`0x2Ba614a598Cffa5a19d683cDCA97bac3a49313d1`](https://explorer.mezo.org/address/0x2Ba614a598Cffa5a19d683cDCA97bac3a49313d1) (`weights`, `gaugeToBribe`, then `tokenRewardsPerEpoch` on each incentive contract) and rebase distributor [`0x075108F275Ed81c9CFc01065E6e50CEea81D6363`](https://explorer.mezo.org/address/0x075108F275Ed81c9CFc01065E6e50CEea81D6363) (`tokensPerWeek`). Rebase shares follow `votingPowerOfNFTAt / totalVotingPowerAt` in the distributor's source.
+
 ## Contracts
 
 | Contract | Job |
