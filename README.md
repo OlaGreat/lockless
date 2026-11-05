@@ -192,7 +192,7 @@ DeFi and Web3 builder, writing smart contracts for lending and borrowing protoco
 
 - **Ships quickly:** Lockless went from idea to a working testnet deployment, with contracts, keeper and app, during Wave 1.
 - **Acts on feedback:** every finding from the Wave 1 judges and from KupiaSec was fixed, tested against Mezo's real contracts and redeployed within a week. See the [security review](docs/security-review.md).
-- **Plans beyond the buildathon:** an external audit and a multisig owner behind a timelock before mainnet, and open to collaborators who want to help take Lockless there.
+- **Plans beyond the buildathon:** an external audit and a multisig owner behind a timelock before mainnet.
 
 ## Roadmap (Wave 2)
 
