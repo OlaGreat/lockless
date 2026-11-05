@@ -90,10 +90,8 @@ Mezo's MEZO and BTC tokens and its price oracle are precompiles that only run on
 - **BTC swap with the oracle floor (M-02).** 0.0002 BTC swapped for 15.72 MUSD on the real Mezo Pools router, above the 15.00 floor: [swap](https://explorer.test.mezo.org/tx/0x2cee2a15cc4acfe5fe4f5bca093d708c976190268ff3bafedb641f2b90f29aca).
 - **Keeper harvest run.** Rebase claim, swap and MUSD stream to stakers, with the 10% fee to the treasury: [rebase claim](https://explorer.test.mezo.org/tx/0x6a24944b230a6ae461ff0ac0459e621ef7416efb7906bf12489089fbc33b0946), [stream](https://explorer.test.mezo.org/tx/0xf7a9b07e1101591248d6ea7f18e6b9d59004270fd01595d55ee15f4818d8acc7).
 
-Still to confirm, after the epoch ends on 2026-11-05:
-
-- **Converting a lock with BTC and MEZO incentives (M-01).** Test lock #940 votes this epoch for both gauges carrying demo incentives. Converting it next epoch should pay its share of both to the receiver.
-- **Harvesting the master lock's real incentives.** The master lock votes for the same gauges.
+- **Converting a lock with BTC and MEZO incentives (M-01).** Test lock #940 voted for both demo gauges, then [converted](https://explorer.test.mezo.org/tx/0x2fe5e81cbf8d315ca9a3e7079a7b66019f58ad0faee5ec233c7c92db52a35542) on 2026-11-05. The receiver got exactly the 0.0000037 BTC and 0.2615 MEZO it earned, and 4.0214 stMEZO including its 0.0214 MEZO rebase. Before the fix, both incentives and the rebase would have been lost.
+- **Harvesting the master lock's real incentives.** On 2026-11-05 the keeper [claimed](https://explorer.test.mezo.org/tx/0xdf2c41dd99ef6acef3833b317481309bc5c48e149e8a740748a6f74db305097e) 0.000496 BTC and 2.738 MEZO, [claimed the rebase](https://explorer.test.mezo.org/tx/0x6cdb7d23fd3062431956db49ac15d464a3d751321a4e06352ab18aaeb988377e), [swapped](https://explorer.test.mezo.org/tx/0x3ed41754c06e177d3fd60738eb41514a53462b1a58bd5234601ab47c75347307) the BTC above the oracle floor and streamed the results to stakers. stMEZO stayed fully backed.
 
 ## Credits
 

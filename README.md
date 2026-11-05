@@ -108,8 +108,17 @@ Live on testnet:
 
 - Master lock: veMEZO #939, permanent, owned by the vault.
 - stMEZO/MEZO pool on Mezo Pools with 59 stMEZO and 59 MEZO: [`0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2`](https://explorer.test.mezo.org/address/0x6eF4f3547beBF8A80b3ab53E724BE72f890cbdA2). Selling 1 stMEZO returns 0.98 MEZO and selling 10 returns 8.55 MEZO.
-- Keeper vote for the epoch starting 2026-10-29, split 92.7/7.3 across two gauges: [transaction](https://explorer.test.mezo.org/tx/0x6aa0f148f5fc553876c449e3d5018f86a3a99c88cd0f10dae86cda66ec25f7b0). No testnet gauge paid incentives that week, so we added small demo incentives ourselves (0.0005 BTC and 3 MEZO) to run the full yield flow.
-- First live swap through the harvester: 0.0002 BTC of test funds swapped for 15.72 MUSD, above the oracle floor of 15.00 ([transaction](https://explorer.test.mezo.org/tx/0x2cee2a15cc4acfe5fe4f5bca093d708c976190268ff3bafedb641f2b90f29aca)). The 10% fee went to the treasury and 14.14 MUSD is streaming to stakers over seven days ([transaction](https://explorer.test.mezo.org/tx/0xf7a9b07e1101591248d6ea7f18e6b9d59004270fd01595d55ee15f4818d8acc7)).
+- **Week of 2026-10-29.** No testnet gauge paid incentives, so we added small demo incentives ourselves (0.0005 BTC and 3 MEZO). The keeper split the vote 92.7/7.3 across those two gauges: [vote](https://explorer.test.mezo.org/tx/0x6aa0f148f5fc553876c449e3d5018f86a3a99c88cd0f10dae86cda66ec25f7b0). A first test swap of 0.0002 BTC from our own funds returned 15.72 MUSD above the oracle floor of 15.00: [swap](https://explorer.test.mezo.org/tx/0x2cee2a15cc4acfe5fe4f5bca093d708c976190268ff3bafedb641f2b90f29aca), [stream](https://explorer.test.mezo.org/tx/0xf7a9b07e1101591248d6ea7f18e6b9d59004270fd01595d55ee15f4818d8acc7).
+- **Harvest on 2026-11-05, the full yield flow:**
+  - [Claimed incentives](https://explorer.test.mezo.org/tx/0xdf2c41dd99ef6acef3833b317481309bc5c48e149e8a740748a6f74db305097e): 0.000496 BTC and 2.738 MEZO.
+  - [Claimed the rebase](https://explorer.test.mezo.org/tx/0x6cdb7d23fd3062431956db49ac15d464a3d751321a4e06352ab18aaeb988377e): 1.548 MEZO, minted as stMEZO for stakers.
+  - [Locked the MEZO incentives](https://explorer.test.mezo.org/tx/0x01fa3047c2fc1490f0b5a375ae965ccd57a9c196f4672125f657826037fd92be) into stMEZO.
+  - [Swapped the BTC](https://explorer.test.mezo.org/tx/0x3ed41754c06e177d3fd60738eb41514a53462b1a58bd5234601ab47c75347307) for 39.00 MUSD on Mezo Pools, above the oracle floor of 38.75.
+  - Streamed [35.10 MUSD](https://explorer.test.mezo.org/tx/0xc8fe041bb26a90234718cad05eef9fb9036f89bf18fca37d0c91b18b97fdca6f) and [3.857 stMEZO](https://explorer.test.mezo.org/tx/0x900fcad6ea5aa64c5fc6b3ffbbbe9e9326c52420f9e9cdf649e1801819dc97f2) to stakers over seven days, after the 10% fee.
+- **Converting a lock that earned incentives:** test lock #940 voted for both demo gauges, then [converted](https://explorer.test.mezo.org/tx/0x2fe5e81cbf8d315ca9a3e7079a7b66019f58ad0faee5ec233c7c92db52a35542). The receiver got the 0.0000037 BTC and 0.2615 MEZO it earned, and 4.0214 stMEZO, which includes its 0.0214 MEZO rebase.
+- **Week of 2026-11-05:** demo incentives of 0.0003 BTC and 2 MEZO, and the keeper's [vote](https://explorer.test.mezo.org/tx/0xd5f213e0590a897082502a6f1da4aa09038e02c72efc61178b4e14f3d9ad7e4d).
+
+After the harvest the vault holds 79.31 MEZO against exactly 79.31 stMEZO.
 
 The Wave 1 contracts ([`0xD274D85f935A097252D9B624A45f9Dd1E6B9c671`](https://explorer.test.mezo.org/address/0xD274D85f935A097252D9B624A45f9Dd1E6B9c671) and its stMEZO, staking and harvester) are retired. They had the issues in the [security review](docs/security-review.md) and cannot be upgraded, so the fixed contracts were deployed fresh. Their test MEZO stays in the old permanent lock.
 
