@@ -13,6 +13,25 @@ Built for the Mezo Buildathon, Track 1 (DeFi): a staking derivative for MEZO tha
 
 **Live app (Mezo testnet):** https://olagreat.github.io/lockless/
 
+## What changed in Wave 2
+
+The Wave 1 judges asked for five things. All five are done:
+
+- **The owner could take all rewards (High).** The rewards receiver can now be set only once, and the owner's attempt to change it reverts on the live contract. See the [security review](docs/security-review.md).
+- **Run the yield flow live.** On 2026-11-05 the keeper claimed the week's incentives and rebase, swapped the BTC for MUSD above the oracle floor and streamed both to stakers. The transactions are listed under [Testnet deployment](#testnet-deployment-chain-31611).
+- **An exit path for stMEZO.** The app has a Sell stMEZO tab, and the stMEZO/MEZO pool now holds 59 of each, about 12 times deeper.
+- **Unit economics.** Built from Mezo mainnet data, in [Unit economics](#unit-economics).
+- **A team section.** See [Team](#team).
+
+Also in Wave 2:
+
+- Four issues reported by KupiaSec and one found in our own review, each fixed test-first and checked against Mezo's real contracts. Converting a lock now pays out its incentives and rebase, proven on testnet.
+- Harvest swaps cannot return less than 97% of Mezo's BTC oracle price.
+- Staking rewards are no longer lost while nobody is staked.
+- Converting a lock that voted for 30 gauges now uses 57% of a block's gas, down from 74%.
+- The contracts were redeployed with the fixes and verified on Sourcify. The Wave 1 contracts are retired.
+- 17 fork tests now run against Mezo's real contracts, including its weekly rebase, plus invariant tests on staking.
+
 ## Why
 
 - **veMEZO is a 4-year lock.** It only earns if the holder votes on boost gauges and claims every week. Most holders cannot do that well, and nobody can leave early.
@@ -203,9 +222,10 @@ DeFi and Web3 builder, writing smart contracts for lending and borrowing protoco
 - **Acts on feedback:** every finding from the Wave 1 judges and from KupiaSec was fixed, tested against Mezo's real contracts and redeployed within a week. See the [security review](docs/security-review.md).
 - **Plans beyond the buildathon:** an external audit and a multisig owner behind a timelock before mainnet.
 
-## Roadmap (Wave 2)
+## What's next
 
-- Real MUSD yield from live epochs.
+- An external audit, then a multisig owner behind a timelock.
+- A mainnet launch with deposit caps, raised as the vault proves itself.
 - Borrow MUSD against stMEZO.
 - A BTC side: the vault boosts its own veBTC positions with its votes, so BTC depositors get up to 5x boost without buying it.
 - On-chain limits on keeper votes, then stMEZO-holder governance.
