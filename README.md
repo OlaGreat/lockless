@@ -204,6 +204,7 @@ Connect a browser wallet on Mezo testnet. Get test BTC and MEZO from the [faucet
 - **A lock that voted this epoch waits until Thursday.** Its votes can only be reset in a new epoch, and not in that epoch's first hour.
 - **Incentives on gauges a lock no longer votes for are not found automatically.** Converting pays out what the lock earned on the gauges it votes for now. Claim older ones on Mezo first.
 - **A lock with a pending rebase waits for Mezo's weekly update.** Until Mezo starts the new week, conversion reverts rather than lose the rebase.
+- **Testnet APR looks extreme.** The app's live staking APR uses real stream rates and pool prices, but on testnet only a few stMEZO are staked against the demo incentives, so it shows "Over 10,000%". The mainnet estimate is in [Unit economics](#unit-economics).
 - **The keeper is trusted** to choose gauges. It cannot move user funds, redirect rewards or sell BTC below 97% of the oracle price. On-chain limits on its votes are planned.
 - **The owner is a single testnet wallet.** It can change the keeper and set the fee up to the 20% cap. It cannot redirect rewards: the rewards receiver can be set only once. Mainnet ownership moves to a multisig behind a timelock.
 

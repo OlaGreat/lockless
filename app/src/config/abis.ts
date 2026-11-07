@@ -17,6 +17,7 @@ export const stakingAbi = parseAbi([
   "function totalStaked() view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",
   "function earned(address account, address token) view returns (uint256)",
+  "function rewardData(address token) view returns (address distributor, uint256 duration, uint256 periodFinish, uint256 rate, uint256 lastUpdate, uint256 rewardPerTokenStored)",
 ]);
 
 export const veMezoAbi = parseAbi([
