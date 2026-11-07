@@ -26,7 +26,7 @@ Severity: **High** means funds can be taken. **Medium** means funds can be lost 
 These are known and disclosed rather than fixed.
 
 - **The keeper chooses where the master lock votes.** It cannot move user funds, redirect rewards or sell BTC below 97% of the oracle price, but it could vote for gauges that pay little, or that benefit itself. On-chain limits on keeper votes are planned.
-- **The owner is a single testnet wallet.** It can change the keeper and set the protocol fee up to the 20% cap without delay. It cannot redirect rewards. Before mainnet, ownership moves to a multisig behind a timelock.
+- **The owner is a single testnet wallet.** The keeper runs on a separate wallet with no owner powers, so only the keeper key is used by the scheduled workflow. The owner can change the keeper and set the protocol fee up to the 20% cap without delay. It cannot redirect rewards. Before mainnet, ownership moves to a multisig behind a timelock.
 - **stMEZO cannot be redeemed for MEZO.** The master lock is permanent, so holders exit by selling stMEZO.
 - **Mezo's contracts are upgradeable.** veMEZO, the boost voter and the price feed sit behind proxies Mezo controls. The fixes were checked against the implementations deployed on 2026-11-02.
 

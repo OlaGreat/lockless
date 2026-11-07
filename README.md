@@ -187,7 +187,9 @@ pnpm keeper harvest   # claim incentives and rebase, convert, stream to stakers
 pnpm keeper epoch     # harvest, then vote
 ```
 
-It reads `contracts/deployments/31611.json` and `PRIVATE_KEY` from `contracts/.env`. Set `MEZO_USD_PRICE` to value MEZO incentives, because testnet has no MEZO pool to price it from.
+It reads `contracts/deployments/31611.json`, and `PRIVATE_KEY` from `keeper/.env`, falling back to `contracts/.env`. Set `MEZO_USD_PRICE` to value MEZO incentives when ranking gauges.
+
+The keeper runs on its own wallet ([`0x4a438C3fCCB08A14b8Df196198EBAa144f34354f`](https://explorer.test.mezo.org/address/0x4a438C3fCCB08A14b8Df196198EBAa144f34354f)), which holds the keeper role on the vault and the harvester and no owner powers. The [keeper workflow](.github/workflows/keeper.yml) runs `pnpm keeper epoch` every Thursday at 01:30 UTC, after Mezo's first-hour voting freeze, and again at 07:30 UTC in case the first run fails. Running twice in an epoch does nothing extra. It reads the key from the `KEEPER_PRIVATE_KEY` repository secret.
 
 ## App
 
@@ -206,7 +208,7 @@ Connect a browser wallet on Mezo testnet. Get test BTC and MEZO from the [faucet
 - **A lock with a pending rebase waits for Mezo's weekly update.** Until Mezo starts the new week, conversion reverts rather than lose the rebase.
 - **Testnet APR looks extreme.** The app's live staking APR uses real stream rates and pool prices, but on testnet only a few stMEZO are staked against the demo incentives, so it shows "Over 10,000%". The mainnet estimate is in [Unit economics](#unit-economics).
 - **The keeper is trusted** to choose gauges. It cannot move user funds, redirect rewards or sell BTC below 97% of the oracle price. On-chain limits on its votes are planned.
-- **The owner is a single testnet wallet.** It can change the keeper and set the fee up to the 20% cap. It cannot redirect rewards: the rewards receiver can be set only once. Mainnet ownership moves to a multisig behind a timelock.
+- **The owner is a single testnet wallet,** separate from the keeper's wallet, so the owner key never runs in automation. It can change the keeper and set the fee up to the 20% cap. It cannot redirect rewards: the rewards receiver can be set only once. Mainnet ownership moves to a multisig behind a timelock.
 
 ## Security
 

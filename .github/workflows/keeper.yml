@@ -1,0 +1,41 @@
+name: Keeper epoch run
+
+# Each Mezo epoch starts on Thursday at 00:00 UTC, and votes are blocked for its first hour.
+# The second run retries the same day; harvesting and voting twice in one epoch do nothing.
+on:
+  schedule:
+    - cron: "30 1 * * 4"
+    - cron: "30 7 * * 4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keeper
+  cancel-in-progress: false
+
+jobs:
+  epoch:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: keeper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: keeper/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - name: Harvest last epoch and vote this one
+        run: pnpm keeper epoch
+        env:
+          # A keeper-only wallet: it can vote and harvest, but has no owner powers.
+          PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}
+          MEZO_USD_PRICE: "0.1"
