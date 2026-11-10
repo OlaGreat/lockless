@@ -189,7 +189,7 @@ pnpm keeper epoch     # harvest, then vote
 
 It reads `contracts/deployments/31611.json`, and `PRIVATE_KEY` from `keeper/.env`, falling back to `contracts/.env`. Set `MEZO_USD_PRICE` to value MEZO incentives when ranking gauges.
 
-The keeper runs on its own wallet ([`0x4a438C3fCCB08A14b8Df196198EBAa144f34354f`](https://explorer.test.mezo.org/address/0x4a438C3fCCB08A14b8Df196198EBAa144f34354f)), which holds the keeper role on the vault and the harvester and no owner powers. The [keeper workflow](.github/workflows/keeper.yml) runs `pnpm keeper epoch` every Thursday at 01:30 UTC, after Mezo's first-hour voting freeze, and again at 07:30 UTC in case the first run fails. Running twice in an epoch does nothing extra. It reads the key from the `KEEPER_PRIVATE_KEY` repository secret.
+The keeper runs on its own wallet ([`0x4a438C3fCCB08A14b8Df196198EBAa144f34354f`](https://explorer.test.mezo.org/address/0x4a438C3fCCB08A14b8Df196198EBAa144f34354f)), which holds the keeper role on the vault and the harvester and no owner powers. The [keeper workflow](.github/workflows/keeper.yml) runs `pnpm keeper epoch` every Thursday at 01:30 UTC, after Mezo's first-hour voting freeze, and again at 07:30 UTC in case the first run fails. Running twice in an epoch does nothing extra. It reads the key from the `KEEPER_PRIVATE_KEY` repository secret. Its first run, on 10 Nov, [claimed the master lock's rebase](https://explorer.test.mezo.org/tx/0x10b071429f63d6ff1242bc95e7d3003b47a5c061b6b192375bd69b3e066a387a) signed by the keeper wallet, and skipped the vote because the vault had already voted that epoch.
 
 ## App
 
