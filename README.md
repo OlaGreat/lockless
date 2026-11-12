@@ -137,7 +137,15 @@ Live on testnet:
 - **Converting a lock that earned incentives:** test lock #940 voted for both demo gauges, then [converted](https://explorer.test.mezo.org/tx/0x2fe5e81cbf8d315ca9a3e7079a7b66019f58ad0faee5ec233c7c92db52a35542). The receiver got the 0.0000037 BTC and 0.2615 MEZO it earned, and 4.0214 stMEZO, which includes its 0.0214 MEZO rebase.
 - **Week of 2026-11-05:** demo incentives of 0.0003 BTC and 2 MEZO, and the keeper's [vote](https://explorer.test.mezo.org/tx/0xd5f213e0590a897082502a6f1da4aa09038e02c72efc61178b4e14f3d9ad7e4d).
 
-After the harvest the vault holds 79.31 MEZO against exactly 79.31 stMEZO.
+- **Harvest on 2026-11-12, run by the [keeper workflow](.github/workflows/keeper.yml)** and signed by the keeper-only wallet:
+  - [Claimed incentives](https://explorer.test.mezo.org/tx/0x7c4fe54856ca6309b73f3a4b8cb7cc9a0085a247c54de678222a19b3e4168e40): 0.0003 BTC and 2 MEZO.
+  - [Claimed the rebase](https://explorer.test.mezo.org/tx/0xe9182247f750a5c2fbbf98093566f11db273797944e802022411f4d5b58c9030): 1.712 MEZO, minted as stMEZO for stakers.
+  - [Locked the MEZO incentives](https://explorer.test.mezo.org/tx/0x2229c9689a517393249e93b2701cb62bfce937031bc5afa4ae76db1a45160c59) into stMEZO.
+  - [Swapped the BTC](https://explorer.test.mezo.org/tx/0x91739c4b20a2c0c8975179d0804d6f5a05fe5d85f1b64a9897be3470fb0a8347) for 23.54 MUSD on Mezo Pools, above the oracle floor.
+  - Streamed [21.18 MUSD](https://explorer.test.mezo.org/tx/0x639c71156dc2623ee0f3ac1d2237841d3c819632cb27eceb4554abbac8619023) and [3.341 stMEZO](https://explorer.test.mezo.org/tx/0x09447080b626d71c6475431c6319b73d32e66b764bd0642f84d3f850f6b31970) to stakers over seven days, after the 10% fee.
+  - No gauge pays incentives this week, so the keeper did not vote.
+
+After the harvest the vault holds 83.02 MEZO against exactly 83.02 stMEZO.
 
 The Wave 1 contracts ([`0xD274D85f935A097252D9B624A45f9Dd1E6B9c671`](https://explorer.test.mezo.org/address/0xD274D85f935A097252D9B624A45f9Dd1E6B9c671) and its stMEZO, staking and harvester) are retired. They had the issues in the [security review](docs/security-review.md) and cannot be upgraded, so the fixed contracts were deployed fresh. Their test MEZO stays in the old permanent lock.
 
@@ -189,7 +197,7 @@ pnpm keeper epoch     # harvest, then vote
 
 It reads `contracts/deployments/31611.json`, and `PRIVATE_KEY` from `keeper/.env`, falling back to `contracts/.env`. Set `MEZO_USD_PRICE` to value MEZO incentives when ranking gauges.
 
-The keeper runs on its own wallet ([`0x4a438C3fCCB08A14b8Df196198EBAa144f34354f`](https://explorer.test.mezo.org/address/0x4a438C3fCCB08A14b8Df196198EBAa144f34354f)), which holds the keeper role on the vault and the harvester and no owner powers. The [keeper workflow](.github/workflows/keeper.yml) runs `pnpm keeper epoch` every Thursday at 01:30 UTC, after Mezo's first-hour voting freeze, and again at 07:30 UTC in case the first run fails. Running twice in an epoch does nothing extra. It reads the key from the `KEEPER_PRIVATE_KEY` repository secret. Its first run, on 10 Nov, [claimed the master lock's rebase](https://explorer.test.mezo.org/tx/0x10b071429f63d6ff1242bc95e7d3003b47a5c061b6b192375bd69b3e066a387a) signed by the keeper wallet, and skipped the vote because the vault had already voted that epoch.
+The keeper runs on its own wallet ([`0x4a438C3fCCB08A14b8Df196198EBAa144f34354f`](https://explorer.test.mezo.org/address/0x4a438C3fCCB08A14b8Df196198EBAa144f34354f)), which holds the keeper role on the vault and the harvester and no owner powers. The [keeper workflow](.github/workflows/keeper.yml) runs `pnpm keeper epoch` every Thursday at 01:30 UTC, after Mezo's first-hour voting freeze, and again at 07:30 UTC in case the first run fails. Running twice in an epoch does nothing extra. It reads the key from the `KEEPER_PRIVATE_KEY` repository secret. Its first run, on 10 Nov, [claimed the master lock's rebase](https://explorer.test.mezo.org/tx/0x10b071429f63d6ff1242bc95e7d3003b47a5c061b6b192375bd69b3e066a387a) signed by the keeper wallet, and skipped the vote because the vault had already voted that epoch. On 12 Nov it ran the full harvest listed under [Testnet deployment](#testnet-deployment-chain-31611). One step first ran out of gas because the node's estimate was too low, so the keeper now adds 30% headroom to every gas estimate.
 
 ## App
 
