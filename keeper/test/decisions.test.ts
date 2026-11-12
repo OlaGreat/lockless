@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { btcSwapMinimum, decideVote, planConversions, planDistributions } from "../src/decisions";
+import { btcSwapMinimum, decideVote, planConversions, planDistributions, planRebase } from "../src/decisions";
 import { EPOCH_SECONDS } from "../src/epoch";
 
 const EPOCH = 2_900 * EPOCH_SECONDS;
@@ -80,5 +80,21 @@ describe("btcSwapMinimum", () => {
       swap: false,
       reason: "the pool quotes more than 3% below Mezo's BTC price",
     });
+  });
+});
+
+describe("planRebase", () => {
+  const backed = { claimable: 0n, lockedMezo: 10n, stMezoSupply: 10n };
+
+  it("claims when the master lock has a rebase waiting", () => {
+    expect(planRebase({ ...backed, claimable: 3n })).toBe("claimRebase");
+  });
+
+  it("mints stMEZO for a rebase someone else already claimed for the lock", () => {
+    expect(planRebase({ ...backed, lockedMezo: 12n })).toBe("distributeRebase");
+  });
+
+  it("does nothing when there is no rebase and every MEZO is backed", () => {
+    expect(planRebase(backed)).toBeNull();
   });
 });

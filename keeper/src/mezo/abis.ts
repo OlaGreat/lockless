@@ -29,6 +29,7 @@ export const vaultAbi = parseAbi([
   "function vote(address[] gauges, uint256[] weights)",
   "function harvest(address[] bribes, address[][] tokens)",
   "function claimRebase()",
+  "function distributeRebase()",
   "function poke()",
 ]);
 
@@ -51,4 +52,7 @@ export const priceFeedAbi = parseAbi(["function fetchPrice() view returns (uint2
 
 export const erc20Abi = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
 ]);
+
+export const rebaseDistributorAbi = parseAbi(["function claimable(uint256 tokenId) view returns (uint256)"]);

@@ -65,3 +65,19 @@ export function btcSwapMinimum(quoted: bigint, oracleFloor: bigint): SwapDecisio
 function wait(reason: string): VoteDecision {
   return { vote: false, reason };
 }
+
+export interface RebaseState {
+  /** Rebase the distributor holds for the master lock. */
+  claimable: bigint;
+  lockedMezo: bigint;
+  stMezoSupply: bigint;
+}
+
+export type RebaseStep = "claimRebase" | "distributeRebase";
+
+/** Claims a waiting rebase, or mints stMEZO for one that someone else claimed for the lock. */
+export function planRebase(state: RebaseState): RebaseStep | null {
+  if (state.claimable > 0n) return "claimRebase";
+  if (state.lockedMezo > state.stMezoSupply) return "distributeRebase";
+  return null;
+}

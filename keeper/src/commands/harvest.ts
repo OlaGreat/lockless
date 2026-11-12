@@ -3,11 +3,12 @@ import {
   btcSwapMinimum,
   planConversions,
   planDistributions,
+  planRebase,
   type Conversion,
   type Distribution,
   type HarvesterBalances,
 } from "../decisions";
-import { erc20Abi, harvesterAbi, routerAbi, vaultAbi } from "../mezo/abis";
+import { erc20Abi, harvesterAbi, rebaseDistributorAbi, routerAbi, vaultAbi } from "../mezo/abis";
 import { sendAndWait, type WriteCall } from "../mezo/chain";
 import { readEarnedIncentives, toHarvestArguments } from "../mezo/harvestPlan";
 import { readOpportunities } from "../mezo/opportunities";
@@ -39,13 +40,30 @@ async function claimIncentives(ctx: KeeperContext, signer: WalletClient): Promis
   await send(ctx, signer, "Harvested incentives", vaultCall(ctx, "harvest", [bribes, tokens]));
 }
 
-/** The rebase can only be claimed once per epoch, so a failed claim is reported and skipped. */
+/** Claims or mints the rebase only when there is some. A failure is reported and skipped. */
 async function claimRebase(ctx: KeeperContext, signer: WalletClient): Promise<void> {
+  const step = planRebase(await readRebaseState(ctx));
+  if (!step) {
+    ctx.log("No rebase to claim.");
+    return;
+  }
   try {
-    await send(ctx, signer, "Claimed rebase", vaultCall(ctx, "claimRebase"));
+    const label = step === "claimRebase" ? "Claimed rebase" : "Minted stMEZO for the rebase";
+    await send(ctx, signer, label, vaultCall(ctx, step));
   } catch (error) {
     ctx.log(`Rebase not claimed: ${(error as Error).message.split("\n")[0]}`);
   }
+}
+
+async function readRebaseState(ctx: KeeperContext) {
+  const { contracts } = ctx.config;
+  const masterTokenId = await readMasterTokenId(ctx);
+  const [claimable, lockedMezo, stMezoSupply] = await ctx.reader.readAll<bigint>([
+    { address: contracts.rebaseDistributor, abi: rebaseDistributorAbi, functionName: "claimable", args: [masterTokenId] },
+    { address: contracts.vault, abi: vaultAbi, functionName: "lockedAmount" },
+    { address: contracts.stMEZO, abi: erc20Abi, functionName: "totalSupply" },
+  ]);
+  return { claimable: claimable ?? 0n, lockedMezo: lockedMezo ?? 0n, stMezoSupply: stMezoSupply ?? 0n };
 }
 
 /** Converts first, then streams what the harvester actually holds, since a swap may be skipped. */
