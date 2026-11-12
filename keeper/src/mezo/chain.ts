@@ -13,6 +13,10 @@ import type { KeeperConfig } from "../config";
 
 const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
 const RPC_RETRIES = 5;
+/** Calls into other contracts can need more gas than the node estimates. */
+const GAS_HEADROOM_PERCENT = 30n;
+/** One testnet node lags behind, so a receipt can take a while to show. */
+const RECEIPT_RETRIES = 30;
 export const EXPLORER_URL = "https://explorer.test.mezo.org";
 
 export function mezoTestnet(rpcUrl: string) {
@@ -49,18 +53,24 @@ export interface WriteCall {
   args?: readonly unknown[];
 }
 
+/** Adds headroom to a gas estimate so the transaction does not run out of gas. */
+export function gasWithHeadroom(estimate: bigint): bigint {
+  return (estimate * (100n + GAS_HEADROOM_PERCENT)) / 100n;
+}
+
 /** Sends a transaction, waits for it and returns its explorer link. */
 export async function sendAndWait(
   reader: PublicClient,
   signer: WalletClient,
   call: WriteCall,
 ): Promise<string> {
+  const request = { ...call, account: signer.account!, chain: signer.chain };
+  const estimate = await reader.estimateContractGas(request as Parameters<PublicClient["estimateContractGas"]>[0]);
   const hash = await signer.writeContract({
-    ...call,
-    account: signer.account!,
-    chain: signer.chain,
+    ...request,
+    gas: gasWithHeadroom(estimate),
   } as Parameters<WalletClient["writeContract"]>[0]);
-  const receipt = await reader.waitForTransactionReceipt({ hash });
+  const receipt = await reader.waitForTransactionReceipt({ hash, retryCount: RECEIPT_RETRIES });
   if (receipt.status !== "success") throw new Error(`Transaction failed: ${EXPLORER_URL}/tx/${hash}`);
   return `${EXPLORER_URL}/tx/${hash}`;
 }
