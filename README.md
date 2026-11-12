@@ -13,6 +13,8 @@ Built for the Mezo Buildathon, Track 1 (DeFi): a staking derivative for MEZO tha
 
 **Live app (Mezo testnet):** https://olagreat.github.io/lockless/
 
+**Pitch deck (PDF):** https://drive.google.com/file/d/1a3XKB4NnqiYhip_1lLv9Pr6Nh_6D8UG-/view?usp=sharing
+
 ## What changed in Wave 2
 
 The Wave 1 judges asked for five things. All five are done:
