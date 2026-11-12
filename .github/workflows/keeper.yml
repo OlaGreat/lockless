@@ -1,10 +1,13 @@
 name: Keeper epoch run
 
 # Each Mezo epoch starts on Thursday at 00:00 UTC, and votes are blocked for its first hour.
-# The second run retries the same day; harvesting and voting twice in one epoch do nothing.
+# GitHub can delay or skip scheduled runs, so later runs retry the same day.
+# A run with nothing left to harvest or vote sends no transactions.
 on:
   schedule:
     - cron: "30 1 * * 4"
+    - cron: "30 3 * * 4"
+    - cron: "30 5 * * 4"
     - cron: "30 7 * * 4"
   workflow_dispatch:
 
